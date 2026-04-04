@@ -11,7 +11,7 @@ from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 add_beobachtung, remove_beobachtung,
                 get_phaenologie_jahr, get_phaenologie_alle_jahre,
                 upsert_phaenologie, remove_phaenologie, get_aktuelle_phase,
-                duplicate_plant,
+                duplicate_plant, set_plant_active,
                 PHAENOLOGISCHE_PHASEN, PHASEN_ICONS)
 
 PORT = int(os.environ.get("PORT", 5000))
@@ -47,7 +47,8 @@ def _safe_next(next_url: str) -> str:
 
 @app.route("/")
 def index():
-    plants = get_all_plants()
+    show_inactive = request.args.get("show_inactive", "")
+    plants = get_all_plants(include_inactive=bool(show_inactive))
 
     # Filter: Kategorie
     filter_kategorie = request.args.get("kategorie", "")
@@ -87,6 +88,7 @@ def index():
                            filter_kategorie=filter_kategorie,
                            filter_ereignis=filter_ereignis,
                            filter_monat=filter_monat,
+                           show_inactive=show_inactive,
                            aktuelle_phase=aktuelle_phase,
                            phasen_icons=PHASEN_ICONS)
 
@@ -363,6 +365,30 @@ def duplicate_route(plant_id: int):
         abort(404)
     new_id = duplicate_plant(plant_id)
     return redirect(f"/plant/{new_id}/edit")
+
+
+@app.route("/plant/<int:plant_id>/deactivate", methods=["POST"])
+def deactivate_route(plant_id: int):
+    plant = get_plant(plant_id)
+    if plant is None:
+        abort(404)
+    try:
+        set_plant_active(plant_id, 0)
+    except Exception:
+        return redirect(url_for("index"))
+    return redirect(url_for("index"))
+
+
+@app.route("/plant/<int:plant_id>/activate", methods=["POST"])
+def activate_route(plant_id: int):
+    plant = get_plant(plant_id)
+    if plant is None:
+        abort(404)
+    try:
+        set_plant_active(plant_id, 1)
+    except Exception:
+        return redirect(url_for("index"))
+    return redirect(f"/plant/{plant_id}/edit")
 
 
 @app.route("/plant/<int:plant_id>/beobachtung/add", methods=["POST"])

@@ -159,6 +159,25 @@ td {
 .badge-bi     { background: #e8d5f5; color: #5b2c8d; }
 .badge-peren  { background: var(--green-pale); color: var(--green-dark); }
 
+/* ── Inactive plants ────────────────────────────────────────── */
+.row-inactive { opacity: 0.5; }
+.row-inactive:hover { opacity: 0.7; }
+
+.badge-inactive {
+  background: #e2e3e5;
+  color: #6c757d;
+}
+
+.alert-inactive {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+  border-radius: var(--radius-sm);
+  padding: .65rem 1rem;
+  margin-bottom: 1rem;
+  font-size: .9rem;
+}
+
 /* ── Ereignisse list ────────────────────────────────────────── */
 ul.ereignisse {
   list-style: none;

@@ -49,7 +49,15 @@
                 {% endfor %}
             </select>
         </div>
-        {% if filter_kategorie or filter_ereignis or filter_monat %}
+        <div class="form-field" style="align-self:flex-end">
+            <label style="font-size:.75rem;display:flex;align-items:center;gap:.35rem;cursor:pointer;text-transform:none;letter-spacing:0">
+                <input type="checkbox" name="show_inactive" value="1"
+                       {% if show_inactive %}checked{% endif %}
+                       onchange="this.form.submit()">
+                Inaktive anzeigen
+            </label>
+        </div>
+        {% if filter_kategorie or filter_ereignis or filter_monat or show_inactive %}
         <div class="form-field" style="align-self:flex-end">
             <a href="/" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a>
         </div>
@@ -74,8 +82,8 @@
     </thead>
     <tbody>
     {% for plant in plants %}
-        <tr>
-            <td>{% if plant.farbe %}<span class="color-dot" style="background:{{ plant.farbe }}"></span>{% endif %}<strong>{{ plant.name }}</strong>{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
+        <tr{% if plant.aktiv == 0 %} class="row-inactive"{% endif %}>
+            <td>{% if plant.farbe %}<span class="color-dot" style="background:{{ plant.farbe }}"></span>{% endif %}<strong>{{ plant.name }}</strong>{% if plant.aktiv == 0 %} <span class="badge badge-inactive">inaktiv</span>{% endif %}{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
             <td>{{ plant.kategorie or '' }}</td>
             <td class="hide-mobile">
                 {% if plant.type %}{{ plant.type }}{% endif %}

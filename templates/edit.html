@@ -6,6 +6,10 @@
 
 <h2>{{ plant.name }} bearbeiten</h2>
 
+{% if not plant.aktiv %}
+<div class="alert-inactive">💤 Diese Pflanze ist inaktiv.</div>
+{% endif %}
+
 {% if plant.beschreibung %}
 <div class="card" style="background:var(--green-pale);border-color:var(--green-light)">
     <h3 style="margin-top:0;color:var(--green-dark)">📖 Pflanzenbeschreibung</h3>
@@ -359,6 +363,29 @@
         <button type="submit" class="btn btn-outline btn-sm">📋 Duplizieren</button>
     </form>
 </div>
+
+<!-- Pflanze inaktiv setzen / aktivieren -->
+{% if plant.aktiv %}
+<h2>💤 Inaktiv setzen</h2>
+<div class="card">
+    <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:.75rem">
+        Setzt die Pflanze auf inaktiv. Sie wird aus der Pflanzenliste ausgeblendet, alle Daten bleiben erhalten.
+    </p>
+    <form method="post" action="/plant/{{ plant.id }}/deactivate" style="display:inline">
+        <button type="submit" class="btn btn-outline btn-sm">💤 Inaktiv setzen</button>
+    </form>
+</div>
+{% else %}
+<h2>✅ Aktivieren</h2>
+<div class="card">
+    <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:.75rem">
+        Aktiviert die Pflanze wieder. Sie wird in der Pflanzenliste angezeigt.
+    </p>
+    <form method="post" action="/plant/{{ plant.id }}/activate" style="display:inline">
+        <button type="submit" class="btn btn-outline btn-sm">✅ Aktivieren</button>
+    </form>
+</div>
+{% endif %}
 
 <!-- Pflanze löschen -->
 <h2>⚠️ Pflanze entfernen</h2>

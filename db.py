@@ -32,6 +32,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE plants ADD COLUMN beschreibung TEXT")
     if "farbe" not in cols:
         conn.execute("ALTER TABLE plants ADD COLUMN farbe TEXT")
+    if "aktiv" not in cols:
+        conn.execute("ALTER TABLE plants ADD COLUMN aktiv INTEGER DEFAULT 1")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS ereignisse (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,7 +109,7 @@ def duplicate_plant(plant_id: int) -> int:
         row = conn.execute(
             "SELECT name, type, variety, lichtbedarf, kommentar, "
             "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
-            "beschreibung, farbe FROM plants WHERE id = ?",
+            "beschreibung, farbe, aktiv FROM plants WHERE id = ?",
             (plant_id,),
         ).fetchone()
         if row is None:
@@ -117,11 +119,11 @@ def duplicate_plant(plant_id: int) -> int:
         # Generate new name
         new_name = generate_satz_name(plant["name"])
 
-        # Insert new plant with all Stammdaten
+        # Insert new plant with all Stammdaten, always aktiv = 1
         cursor = conn.execute(
             "INSERT INTO plants (name, type, variety, lichtbedarf, kommentar, "
             "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
-            "beschreibung, farbe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "beschreibung, farbe, aktiv) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
             (new_name, plant["type"], plant["variety"], plant["lichtbedarf"],
              plant["kommentar"], plant["lebensdauer"], plant["pflanzmonat"],
              plant["pflanzjahr"], plant["anzahl"], plant["kategorie"],
@@ -147,6 +149,12 @@ def duplicate_plant(plant_id: int) -> int:
     return new_id
 
 
+def set_plant_active(plant_id: int, aktiv: int) -> None:
+    with get_db() as conn:
+        conn.execute("UPDATE plants SET aktiv = ? WHERE id = ?", (aktiv, plant_id))
+        conn.commit()
+
+
 def init_db() -> None:
     with get_db() as conn:
         conn.execute(
@@ -163,12 +171,20 @@ def init_db() -> None:
         _migrate(conn)
 
 
-def get_all_plants() -> list[dict]:
+def get_all_plants(include_inactive: bool = False) -> list[dict]:
     with get_db() as conn:
-        rows = conn.execute(
-            "SELECT id, name, type, variety, lichtbedarf, kommentar, "
-            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, beschreibung, farbe FROM plants"
-        ).fetchall()
+        if include_inactive:
+            rows = conn.execute(
+                "SELECT id, name, type, variety, lichtbedarf, kommentar, "
+                "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
+                "beschreibung, farbe, aktiv FROM plants"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, name, type, variety, lichtbedarf, kommentar, "
+                "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
+                "beschreibung, farbe, aktiv FROM plants WHERE aktiv = 1"
+            ).fetchall()
         plants = []
         for row in rows:
             plant = dict(row)
@@ -253,7 +269,8 @@ def get_plant(plant_id: int) -> dict | None:
     with get_db() as conn:
         row = conn.execute(
             "SELECT id, name, type, variety, lichtbedarf, kommentar, "
-            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, beschreibung, farbe "
+            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
+            "beschreibung, farbe, aktiv "
             "FROM plants WHERE id = ?",
             (plant_id,),
         ).fetchone()
