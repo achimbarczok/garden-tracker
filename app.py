@@ -18,7 +18,7 @@ GERMAN_MONTHS = {
 }
 
 VALID_LICHTBEDARF = {"Sonne", "Halbschatten", "Schatten"}
-VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur"}
+VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"}
 VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
 VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung"]
 VALID_DETAIL = {"", "Anfang", "Mitte", "Ende"}
