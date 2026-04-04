@@ -33,6 +33,7 @@ body {
   max-width: 960px;
   margin: 0 auto;
   padding: 0 1rem 3rem;
+  overflow-x: hidden;
 }
 
 /* ── Header ─────────────────────────────────────────────────── */
@@ -80,6 +81,7 @@ h3 {
   box-shadow: var(--shadow);
   padding: 1.25rem 1.5rem;
   margin-bottom: 1rem;
+  overflow-x: auto;
 }
 
 /* ── Plant table ────────────────────────────────────────────── */
@@ -88,12 +90,15 @@ h3 {
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   margin-bottom: 2rem;
+  max-width: 100%;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   background: var(--white);
+  table-layout: auto;
+  word-break: break-word;
 }
 
 thead tr {
@@ -123,6 +128,8 @@ td {
   padding: .65rem 1rem;
   font-size: .9rem;
   vertical-align: top;
+  max-width: 200px;
+  overflow-wrap: break-word;
 }
 
 /* ── Badges ─────────────────────────────────────────────────── */

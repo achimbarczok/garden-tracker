@@ -38,6 +38,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
             endmonat    INTEGER NOT NULL
         )
     """)
+    # Migration: start_detail/end_detail für ereignisse
+    ecols = {row[1] for row in conn.execute("PRAGMA table_info(ereignisse)")}
+    if "start_detail" not in ecols:
+        conn.execute("ALTER TABLE ereignisse ADD COLUMN start_detail TEXT")
+    if "end_detail" not in ecols:
+        conn.execute("ALTER TABLE ereignisse ADD COLUMN end_detail TEXT")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS beobachtungen (
             id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,6 +56,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
             notiz               TEXT
         )
     """)
+    # Migration: start_detail/end_detail für beobachtungen
+    bcols = {row[1] for row in conn.execute("PRAGMA table_info(beobachtungen)")}
+    if "start_detail" not in bcols:
+        conn.execute("ALTER TABLE beobachtungen ADD COLUMN start_detail TEXT")
+    if "end_detail" not in bcols:
+        conn.execute("ALTER TABLE beobachtungen ADD COLUMN end_detail TEXT")
     conn.commit()
 
 
@@ -79,7 +91,8 @@ def get_all_plants() -> list[dict]:
         for row in rows:
             plant = dict(row)
             ereignisse = conn.execute(
-                "SELECT id, plant_id, ereignistyp, startmonat, endmonat "
+                "SELECT id, plant_id, ereignistyp, startmonat, endmonat, "
+                "start_detail, end_detail "
                 "FROM ereignisse WHERE plant_id = ?",
                 (plant["id"],),
             ).fetchall()
@@ -122,12 +135,14 @@ def remove_plant(plant_id: int) -> None:
 
 
 def add_ereignis(plant_id: int, ereignistyp: str,
-                 startmonat: int, endmonat: int) -> None:
+                 startmonat: int, endmonat: int,
+                 start_detail: str | None = None,
+                 end_detail: str | None = None) -> None:
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO ereignisse (plant_id, ereignistyp, startmonat, endmonat) "
-            "VALUES (?, ?, ?, ?)",
-            (plant_id, ereignistyp, startmonat, endmonat),
+            "INSERT INTO ereignisse (plant_id, ereignistyp, startmonat, endmonat, "
+            "start_detail, end_detail) VALUES (?, ?, ?, ?, ?, ?)",
+            (plant_id, ereignistyp, startmonat, endmonat, start_detail, end_detail),
         )
         conn.commit()
 
@@ -150,14 +165,15 @@ def get_plant(plant_id: int) -> dict | None:
             return None
         plant = dict(row)
         ereignisse = conn.execute(
-            "SELECT id, plant_id, ereignistyp, startmonat, endmonat "
+            "SELECT id, plant_id, ereignistyp, startmonat, endmonat, "
+            "start_detail, end_detail "
             "FROM ereignisse WHERE plant_id = ?",
             (plant_id,),
         ).fetchall()
         plant["ereignisse"] = [dict(e) for e in ereignisse]
         beobachtungen = conn.execute(
             "SELECT id, plant_id, jahr, ereignistyp, startmonat, endmonat, "
-            "phaenologische_phase, notiz "
+            "phaenologische_phase, notiz, start_detail, end_detail "
             "FROM beobachtungen WHERE plant_id = ? ORDER BY jahr DESC, startmonat",
             (plant_id,),
         ).fetchall()
@@ -197,7 +213,9 @@ def update_plant(plant_id: int, name: str, type: str, variety: str | None,
 def add_beobachtung(plant_id: int, jahr: int, ereignistyp: str,
                     startmonat: int, endmonat: int,
                     phaenologische_phase: str | None = None,
-                    notiz: str | None = None) -> None:
+                    notiz: str | None = None,
+                    start_detail: str | None = None,
+                    end_detail: str | None = None) -> None:
     if phaenologische_phase == "":
         phaenologische_phase = None
     if notiz == "":
@@ -206,9 +224,10 @@ def add_beobachtung(plant_id: int, jahr: int, ereignistyp: str,
         conn.execute(
             "INSERT INTO beobachtungen "
             "(plant_id, jahr, ereignistyp, startmonat, endmonat, "
-            "phaenologische_phase, notiz) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "phaenologische_phase, notiz, start_detail, end_detail) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (plant_id, jahr, ereignistyp, startmonat, endmonat,
-             phaenologische_phase, notiz),
+             phaenologische_phase, notiz, start_detail, end_detail),
         )
         conn.commit()
 

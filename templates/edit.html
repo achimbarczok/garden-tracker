@@ -102,7 +102,7 @@
         {% for e in plant.ereignisse %}
         <li>
             <span class="ereignis-tag">{{ e.ereignistyp }}</span>
-            {{ german_months[e.startmonat] }} – {{ german_months[e.endmonat] }}
+            {% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }} – {% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}
             <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline;margin-left:.25rem">
                 <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
                 <button type="submit" class="btn btn-ghost btn-sm">✕</button>
@@ -124,12 +124,24 @@
                 <option value="Düngen">🌿 Düngen</option>
                 <option value="Rückschnitt">✂️ Rückschnitt</option>
             </select>
+            <select name="start_detail">
+                <option value="">–</option>
+                <option value="Anfang">Anfang</option>
+                <option value="Mitte">Mitte</option>
+                <option value="Ende">Ende</option>
+            </select>
             <select name="startmonat">
                 {% for num, name in german_months.items() %}
                 <option value="{{ num }}">{{ name }}</option>
                 {% endfor %}
             </select>
             <span style="align-self:center;color:var(--text-muted)">–</span>
+            <select name="end_detail">
+                <option value="">–</option>
+                <option value="Anfang">Anfang</option>
+                <option value="Mitte">Mitte</option>
+                <option value="Ende">Ende</option>
+            </select>
             <select name="endmonat">
                 {% for num, name in german_months.items() %}
                 <option value="{{ num }}">{{ name }}</option>
@@ -150,7 +162,7 @@
             <span class="beob-year">{{ b.jahr }}</span>
             <div class="beob-details">
                 <span class="ereignis-tag">{{ b.ereignistyp }}</span>
-                {{ german_months[b.startmonat] }} – {{ german_months[b.endmonat] }}
+                {% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }} – {% if b.end_detail %}{{ b.end_detail }} {% endif %}{{ german_months[b.endmonat] }}
                 {% if b.phaenologische_phase %}
                 <span class="beob-phase"> · {{ b.phaenologische_phase }}</span>
                 {% endif %}
@@ -189,6 +201,15 @@
             </div>
             <div class="form-field">
                 <label>Von</label>
+                <select name="start_detail">
+                    <option value="">–</option>
+                    <option value="Anfang">Anfang</option>
+                    <option value="Mitte">Mitte</option>
+                    <option value="Ende">Ende</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Von (Monat)</label>
                 <select name="startmonat">
                     {% for num, name in german_months.items() %}
                     <option value="{{ num }}">{{ name }}</option>
@@ -197,6 +218,15 @@
             </div>
             <div class="form-field">
                 <label>Bis</label>
+                <select name="end_detail">
+                    <option value="">–</option>
+                    <option value="Anfang">Anfang</option>
+                    <option value="Mitte">Mitte</option>
+                    <option value="Ende">Ende</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Bis (Monat)</label>
                 <select name="endmonat">
                     {% for num, name in german_months.items() %}
                     <option value="{{ num }}">{{ name }}</option>

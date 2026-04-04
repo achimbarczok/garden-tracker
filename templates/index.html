@@ -64,7 +64,7 @@
                     {% for e in plant.ereignisse %}
                     <li>
                         <span class="ereignis-tag">{{ e.ereignistyp }}</span>
-                        {{ german_months[e.startmonat] }}–{{ german_months[e.endmonat] }}
+                        {% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}–{% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}
                     </li>
                     {% endfor %}
                 </ul>

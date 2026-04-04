@@ -21,6 +21,7 @@ VALID_LICHTBEDARF = {"Sonne", "Halbschatten", "Schatten"}
 VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt"}
 VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
 VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung"]
+VALID_DETAIL = {"", "Anfang", "Mitte", "Ende"}
 
 app = Flask(__name__)
 
@@ -252,7 +253,9 @@ def add_ereignis_route(plant_id: int):
             400,
         )
 
-    add_ereignis(plant_id, ereignistyp, startmonat, endmonat)
+    add_ereignis(plant_id, ereignistyp, startmonat, endmonat,
+                 request.form.get("start_detail", "").strip() or None,
+                 request.form.get("end_detail", "").strip() or None)
     return redirect(next_url)
 
 
@@ -309,7 +312,9 @@ def add_beobachtung_route(plant_id: int):
                                error="Startmonat darf nicht größer als Endmonat sein."), 400
 
     add_beobachtung(plant_id, jahr, ereignistyp, startmonat, endmonat,
-                    phaenologische_phase, notiz)
+                    phaenologische_phase, notiz,
+                    request.form.get("start_detail", "").strip() or None,
+                    request.form.get("end_detail", "").strip() or None)
     return redirect(next_url)
 
 
