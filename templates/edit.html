@@ -99,5 +99,64 @@
         </label>
         <button type="submit">Hinzufügen</button>
     </form>
+
+    <h2>Beobachtungen</h2>
+
+    {% if plant.beobachtungen %}
+    <ul class="ereignisse">
+        {% for b in plant.beobachtungen %}
+        <li>
+            <strong>{{ b.jahr }}</strong> — {{ b.ereignistyp }}:
+            {{ german_months[b.startmonat] }}–{{ german_months[b.endmonat] }}
+            {% if b.phaenologische_phase %} · {{ b.phaenologische_phase }}{% endif %}
+            {% if b.notiz %} · <em>{{ b.notiz }}</em>{% endif %}
+            <form method="post" action="/beobachtung/{{ b.id }}/remove" style="display:inline">
+                <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
+                <button type="submit" class="btn-small">✕</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>Noch keine Beobachtungen eingetragen.</p>
+    {% endif %}
+
+    <h3>Beobachtung hinzufügen</h3>
+    <form method="post" action="/plant/{{ plant.id }}/beobachtung/add" class="form-add">
+        <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
+        <label>Jahr:
+            <input type="number" name="jahr" min="2000" max="2100"
+                   value="{{ now_year }}" placeholder="z.B. 2025" required>
+        </label>
+        <label>Ereignistyp:
+            <select name="ereignistyp">
+                <option value="Blüte">Blüte</option>
+                <option value="Ernte">Ernte</option>
+                <option value="Düngen">Düngen</option>
+                <option value="Rückschnitt">Rückschnitt</option>
+            </select>
+        </label>
+        <label>Von:
+            <select name="startmonat">
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Bis:
+            <select name="endmonat">
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Phänologische Phase:
+            <input type="text" name="phaenologische_phase" placeholder="z.B. Vollfrühling">
+        </label>
+        <label>Notiz:
+            <input type="text" name="notiz" placeholder="z.B. sehr früh wegen warmem März">
+        </label>
+        <button type="submit">Beobachtung speichern</button>
+    </form>
 </div>
 {% endblock %}

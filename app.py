@@ -1,11 +1,13 @@
 import logging
 import os
 import sys
+from datetime import date
 
 from flask import Flask, abort, redirect, render_template, request, url_for
 
 from db import (add_ereignis, add_plant, get_all_plants, get_plant,
-                init_db, remove_ereignis, remove_plant, update_plant)
+                init_db, remove_ereignis, remove_plant, update_plant,
+                add_beobachtung, remove_beobachtung)
 
 PORT = int(os.environ.get("PORT", 5000))
 
@@ -95,6 +97,7 @@ def edit_route(plant_id: int):
         german_months=GERMAN_MONTHS,
         valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
         valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+        now_year=date.today().year,
     )
 
 
@@ -226,3 +229,54 @@ def remove_ereignis_route(ereignis_id: int):
 def remove(id: int):
     remove_plant(id)
     return redirect(url_for("index"))
+
+
+@app.route("/plant/<int:plant_id>/beobachtung/add", methods=["POST"])
+def add_beobachtung_route(plant_id: int):
+    next_url = _safe_next(request.form.get("next", ""))
+    ereignistyp = request.form.get("ereignistyp", "").strip()
+    phaenologische_phase = request.form.get("phaenologische_phase", "").strip() or None
+    notiz = request.form.get("notiz", "").strip() or None
+
+    try:
+        jahr = int(request.form.get("jahr", ""))
+        startmonat = int(request.form.get("startmonat", ""))
+        endmonat = int(request.form.get("endmonat", ""))
+    except (ValueError, TypeError):
+        plant = get_plant(plant_id)
+        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
+                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+                               error="Ungültige Eingabe für Jahr oder Monat."), 400
+
+    if ereignistyp not in VALID_EREIGNISTYPEN:
+        plant = get_plant(plant_id)
+        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
+                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+                               error="Ereignistyp ungültig."), 400
+
+    if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
+        plant = get_plant(plant_id)
+        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
+                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+                               error="Monat muss zwischen 1 und 12 liegen."), 400
+
+    if startmonat > endmonat:
+        plant = get_plant(plant_id)
+        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
+                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+                               error="Startmonat darf nicht größer als Endmonat sein."), 400
+
+    add_beobachtung(plant_id, jahr, ereignistyp, startmonat, endmonat,
+                    phaenologische_phase, notiz)
+    return redirect(next_url)
+
+
+@app.route("/beobachtung/<int:beobachtung_id>/remove", methods=["POST"])
+def remove_beobachtung_route(beobachtung_id: int):
+    next_url = _safe_next(request.form.get("next", ""))
+    remove_beobachtung(beobachtung_id)
+    return redirect(next_url)

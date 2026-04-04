@@ -32,6 +32,18 @@ def _migrate(conn: sqlite3.Connection) -> None:
             endmonat    INTEGER NOT NULL
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS beobachtungen (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_id            INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+            jahr                INTEGER NOT NULL,
+            ereignistyp         TEXT    NOT NULL,
+            startmonat          INTEGER NOT NULL,
+            endmonat            INTEGER NOT NULL,
+            phaenologische_phase TEXT,
+            notiz               TEXT
+        )
+    """)
     conn.commit()
 
 
@@ -130,6 +142,13 @@ def get_plant(plant_id: int) -> dict | None:
             (plant_id,),
         ).fetchall()
         plant["ereignisse"] = [dict(e) for e in ereignisse]
+        beobachtungen = conn.execute(
+            "SELECT id, plant_id, jahr, ereignistyp, startmonat, endmonat, "
+            "phaenologische_phase, notiz "
+            "FROM beobachtungen WHERE plant_id = ? ORDER BY jahr DESC, startmonat",
+            (plant_id,),
+        ).fetchall()
+        plant["beobachtungen"] = [dict(b) for b in beobachtungen]
     return plant
 
 
@@ -150,4 +169,29 @@ def update_plant(plant_id: int, name: str, type: str, variety: str | None,
             (name, type, variety, lichtbedarf, kommentar,
              lebensdauer, pflanzmonat, pflanzjahr, plant_id),
         )
+        conn.commit()
+
+
+def add_beobachtung(plant_id: int, jahr: int, ereignistyp: str,
+                    startmonat: int, endmonat: int,
+                    phaenologische_phase: str | None = None,
+                    notiz: str | None = None) -> None:
+    if phaenologische_phase == "":
+        phaenologische_phase = None
+    if notiz == "":
+        notiz = None
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO beobachtungen "
+            "(plant_id, jahr, ereignistyp, startmonat, endmonat, "
+            "phaenologische_phase, notiz) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (plant_id, jahr, ereignistyp, startmonat, endmonat,
+             phaenologische_phase, notiz),
+        )
+        conn.commit()
+
+
+def remove_beobachtung(beobachtung_id: int) -> None:
+    with get_db() as conn:
+        conn.execute("DELETE FROM beobachtungen WHERE id = ?", (beobachtung_id,))
         conn.commit()
