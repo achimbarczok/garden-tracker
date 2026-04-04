@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 
 DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
@@ -78,6 +79,72 @@ def _migrate(conn: sqlite3.Connection) -> None:
         )
     """)
     conn.commit()
+
+
+def generate_satz_name(name: str) -> str:
+    """Generate the next 'Satz' name for a duplicated plant.
+
+    Pure function, no DB access.
+    - "Tomate" → "Tomate (2. Satz)"
+    - "Tomate (2. Satz)" → "Tomate (3. Satz)"
+    """
+    match = re.match(r'^(.*?)\s*\((\d+)\.\s*Satz\)$', name)
+    if match:
+        base = match.group(1)
+        n = int(match.group(2))
+        return f"{base} ({n + 1}. Satz)"
+    return f"{name} (2. Satz)"
+
+
+def duplicate_plant(plant_id: int) -> int:
+    """Duplicate a plant with all Stammdaten and Ereignisse.
+
+    Uses an atomic transaction. Beobachtungen are NOT copied.
+    Returns the new plant's ID.
+    """
+    with get_db() as conn:
+        # Read source plant
+        row = conn.execute(
+            "SELECT name, type, variety, lichtbedarf, kommentar, "
+            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
+            "beschreibung, farbe FROM plants WHERE id = ?",
+            (plant_id,),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Pflanze mit ID {plant_id} nicht gefunden")
+        plant = dict(row)
+
+        # Generate new name
+        new_name = generate_satz_name(plant["name"])
+
+        # Insert new plant with all Stammdaten
+        cursor = conn.execute(
+            "INSERT INTO plants (name, type, variety, lichtbedarf, kommentar, "
+            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
+            "beschreibung, farbe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (new_name, plant["type"], plant["variety"], plant["lichtbedarf"],
+             plant["kommentar"], plant["lebensdauer"], plant["pflanzmonat"],
+             plant["pflanzjahr"], plant["anzahl"], plant["kategorie"],
+             plant["beschreibung"], plant["farbe"]),
+        )
+        new_id = cursor.lastrowid
+
+        # Copy all Ereignisse with new plant_id
+        ereignisse = conn.execute(
+            "SELECT ereignistyp, startmonat, endmonat, start_detail, end_detail "
+            "FROM ereignisse WHERE plant_id = ?",
+            (plant_id,),
+        ).fetchall()
+        for e in ereignisse:
+            conn.execute(
+                "INSERT INTO ereignisse (plant_id, ereignistyp, startmonat, "
+                "endmonat, start_detail, end_detail) VALUES (?, ?, ?, ?, ?, ?)",
+                (new_id, e["ereignistyp"], e["startmonat"], e["endmonat"],
+                 e["start_detail"], e["end_detail"]),
+            )
+
+        conn.commit()
+    return new_id
 
 
 def init_db() -> None:

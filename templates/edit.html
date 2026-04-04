@@ -349,6 +349,17 @@
     </form>
 </div>
 
+<!-- Pflanze duplizieren -->
+<h2>📋 Pflanze duplizieren</h2>
+<div class="card">
+    <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:.75rem">
+        Erstellt eine Kopie dieser Pflanze mit allen Stammdaten und Ereignissen.
+    </p>
+    <form method="post" action="/plant/{{ plant.id }}/duplicate" style="display:inline">
+        <button type="submit" class="btn btn-outline btn-sm">📋 Duplizieren</button>
+    </form>
+</div>
+
 <!-- Pflanze löschen -->
 <h2>⚠️ Pflanze entfernen</h2>
 <div class="card" style="border-color:#f5c6cb">

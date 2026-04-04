@@ -6,8 +6,8 @@ Implementierung der Pflanzenduplikation: reine Namens-Suffix-Funktion, atomare D
 
 ## Tasks
 
-- [ ] 1. Kernlogik in `db.py` implementieren
-  - [ ] 1.1 `generate_satz_name(name: str) -> str` implementieren
+- [x] 1. Kernlogik in `db.py` implementieren
+  - [x] 1.1 `generate_satz_name(name: str) -> str` implementieren
     - Reine Funktion ohne DB-Zugriff
     - Regex `r'^(.*?)\s*\((\d+)\.\s*Satz\)$'` prüft auf bestehendes Satz-Suffix
     - Ohne Suffix: `"{name} (2. Satz)"` zurückgeben
@@ -20,7 +20,7 @@ Implementierung der Pflanzenduplikation: reine Namens-Suffix-Funktion, atomare D
     - Prüft: Ergebnis enthält immer `(N. Satz)` mit N ≥ 2, Basisname bleibt erhalten, Transformation ist deterministisch
     - **Validiert: Anforderungen 3.1, 3.2**
 
-  - [ ] 1.3 `duplicate_plant(plant_id: int) -> int` implementieren
+  - [x] 1.3 `duplicate_plant(plant_id: int) -> int` implementieren
     - Liest Quellpflanze und Ereignisse in einer atomaren Transaktion
     - Erzeugt neuen Namen via `generate_satz_name()`
     - INSERT neue Pflanze mit allen Stammdaten (Name, Kategorie, Typ, Sorte, Lichtbedarf, Lebensdauer, Farbe, Anzahl, Pflanzmonat, Pflanzjahr, Beschreibung, Kommentar)
@@ -54,18 +54,18 @@ Implementierung der Pflanzenduplikation: reine Namens-Suffix-Funktion, atomare D
     - Prüft: Duplikat und seine Ereignisse existieren weiterhin unverändert
     - **Validiert: Anforderungen 6.1, 6.2**
 
-- [ ] 2. Checkpoint — Kernlogik und Property-Tests
+- [x] 2. Checkpoint — Kernlogik und Property-Tests
   - Sicherstellen, dass alle bisherigen Tests bestehen. Bei Fragen den Nutzer ansprechen.
 
-- [ ] 3. Route und Template implementieren
-  - [ ] 3.1 `POST /plant/<int:plant_id>/duplicate` Route in `app.py`
+- [x] 3. Route und Template implementieren
+  - [x] 3.1 `POST /plant/<int:plant_id>/duplicate` Route in `app.py`
     - `duplicate_plant` aus `db.py` importieren
     - `get_plant(plant_id)` aufrufen; `abort(404)` wenn `None`
     - `duplicate_plant(plant_id)` aufrufen
     - Bei Erfolg: `redirect` auf `/plant/<neue_id>/edit` (HTTP 302)
     - _Anforderungen: 7.1, 8.1_
 
-  - [ ] 3.2 Duplizieren-Button in `templates/edit.html`
+  - [x] 3.2 Duplizieren-Button in `templates/edit.html`
     - POST-Formular mit `action="/plant/{{ plant.id }}/duplicate"`
     - Button: `📋 Duplizieren` mit Klasse `btn btn-outline btn-sm`
     - Platzierung: im Aktionsbereich der Bearbeitungsseite (oberhalb des Löschbereichs)
@@ -90,7 +90,7 @@ Implementierung der Pflanzenduplikation: reine Namens-Suffix-Funktion, atomare D
     - `test_atomic_transaction_on_failure`: Simulierter DB-Fehler → keine teilweise kopierten Daten
     - **Validiert: Anforderungen 1.2, 3.1, 3.2, 8.1, 8.2**
 
-- [ ] 4. Finaler Checkpoint — Alle Tests bestehen
+- [x] 4. Finaler Checkpoint — Alle Tests bestehen
   - Sicherstellen, dass alle Tests (bestehende und neue) bestehen. Bei Fragen den Nutzer ansprechen.
 
 ## Hinweise

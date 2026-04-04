@@ -11,6 +11,7 @@ from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 add_beobachtung, remove_beobachtung,
                 get_phaenologie_jahr, get_phaenologie_alle_jahre,
                 upsert_phaenologie, remove_phaenologie, get_aktuelle_phase,
+                duplicate_plant,
                 PHAENOLOGISCHE_PHASEN, PHASEN_ICONS)
 
 PORT = int(os.environ.get("PORT", 5000))
@@ -353,6 +354,15 @@ def edit_ereignis_route(ereignis_id: int):
 def remove(id: int):
     remove_plant(id)
     return redirect(url_for("index"))
+
+
+@app.route("/plant/<int:plant_id>/duplicate", methods=["POST"])
+def duplicate_route(plant_id: int):
+    plant = get_plant(plant_id)
+    if plant is None:
+        abort(404)
+    new_id = duplicate_plant(plant_id)
+    return redirect(f"/plant/{new_id}/edit")
 
 
 @app.route("/plant/<int:plant_id>/beobachtung/add", methods=["POST"])

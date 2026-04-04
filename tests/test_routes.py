@@ -30,7 +30,7 @@ def test_empty_state_message(client):
     """
     response = client.get("/")
     assert response.status_code == 200
-    assert "Keine Pflanzen vorhanden." in response.data.decode("utf-8")
+    assert "Noch keine Pflanzen vorhanden." in response.data.decode("utf-8")
 
 
 def test_german_error_messages(client):
@@ -40,4 +40,4 @@ def test_german_error_messages(client):
     """
     response = client.post("/add", data={"name": "   ", "type": "Obst", "variety": ""})
     assert response.status_code == 400
-    assert "Name und Typ dürfen nicht leer sein." in response.data.decode("utf-8")
+    assert "Name darf nicht leer sein." in response.data.decode("utf-8")
