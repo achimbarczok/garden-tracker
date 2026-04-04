@@ -8,7 +8,7 @@
 
 {% if aktuelle_phase %}
 <div class="card" style="background:var(--green-pale);border-color:var(--green-light);margin-bottom:1.5rem">
-    <span style="font-size:1.1rem">🍃 Aktuelle phänologische Jahreszeit: <strong>{{ aktuelle_phase }}</strong></span>
+    <span style="font-size:1.1rem">🍃 Aktuelle phänologische Jahreszeit: <strong>{{ phasen_icons.get(aktuelle_phase, '') }} {{ aktuelle_phase }}</strong></span>
     <a href="/phaenologie" style="margin-left:.75rem;font-size:.85rem">Kalender bearbeiten →</a>
 </div>
 {% else %}

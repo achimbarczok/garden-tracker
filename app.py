@@ -11,7 +11,7 @@ from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 add_beobachtung, remove_beobachtung,
                 get_phaenologie_jahr, get_phaenologie_alle_jahre,
                 upsert_phaenologie, remove_phaenologie, get_aktuelle_phase,
-                PHAENOLOGISCHE_PHASEN)
+                PHAENOLOGISCHE_PHASEN, PHASEN_ICONS)
 
 PORT = int(os.environ.get("PORT", 5000))
 
@@ -85,7 +85,8 @@ def index():
                            filter_kategorie=filter_kategorie,
                            filter_ereignis=filter_ereignis,
                            filter_monat=filter_monat,
-                           aktuelle_phase=aktuelle_phase)
+                           aktuelle_phase=aktuelle_phase,
+                           phasen_icons=PHASEN_ICONS)
 
 
 @app.route("/add", methods=["POST"])
@@ -438,6 +439,7 @@ def phaenologie_page():
     return render_template("phaenologie.html",
                            phasen=phasen,
                            alle_phasen=PHAENOLOGISCHE_PHASEN,
+                           phasen_icons=PHASEN_ICONS,
                            alle_jahre=alle_jahre,
                            selected_year=selected_year,
                            german_months=GERMAN_MONTHS,

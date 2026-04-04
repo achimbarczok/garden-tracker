@@ -296,6 +296,19 @@ PHAENOLOGISCHE_PHASEN = [
     "Winter",
 ]
 
+PHASEN_ICONS = {
+    "Vorfrühling": "❄️🌱",
+    "Erstfrühling": "🌼",
+    "Vollfrühling": "🌸",
+    "Frühsommer": "☀️",
+    "Hochsommer": "🌻",
+    "Spätsommer": "🍎",
+    "Frühherbst": "🍇",
+    "Vollherbst": "🍂",
+    "Spätherbst": "🍁",
+    "Winter": "❄️",
+}
+
 
 def get_phaenologie_jahr(jahr: int) -> list[dict]:
     """Get all phenology entries for a given year, ordered by phase."""

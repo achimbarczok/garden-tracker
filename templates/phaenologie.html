@@ -8,7 +8,7 @@
 
 {% if aktuelle_phase and selected_year == now_year %}
 <div class="card" style="background:var(--green-pale);border-color:var(--green-light);margin-bottom:1rem">
-    <span>Aktuell: <strong>{{ aktuelle_phase }}</strong></span>
+    <span>Aktuell: <strong>{{ phasen_icons.get(aktuelle_phase, '') }} {{ aktuelle_phase }}</strong></span>
 </div>
 {% endif %}
 
@@ -25,6 +25,28 @@
     </form>
 </div>
 
+<details class="card" style="margin-bottom:1rem">
+    <summary style="cursor:pointer;font-weight:600;color:var(--green-dark)">📖 Erkennungsmerkmale der phänologischen Phasen</summary>
+    <table style="margin-top:.75rem;font-size:.85rem">
+        <thead>
+            <tr>
+                <th>Phase</th>
+                <th>Zeigerpflanzen / Merkmale</th>
+                <th style="white-space:nowrap">ca. Zeitraum</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ph in alle_phasen %}
+            <tr>
+                <td>{{ phasen_icons.get(ph, '') }} {{ ph }}</td>
+                <td>{% if ph == "Vorfrühling" %}Schneeglöckchen, Haselnuss blüht, Winterlinge{% elif ph == "Erstfrühling" %}Forsythie blüht, Stachelbeere treibt aus, Buschwindröschen{% elif ph == "Vollfrühling" %}Apfelblüte, Flieder blüht, Stieleiche treibt aus{% elif ph == "Frühsommer" %}Schwarzer Holunder blüht, Gräser blühen, Heumahd{% elif ph == "Hochsommer" %}Linde blüht, Johannisbeeren reif, Winterroggen reif{% elif ph == "Spätsommer" %}Frühäpfel reif, Ebereschenfrüchte orange, Heide blüht{% elif ph == "Frühherbst" %}Schwarzer Holunder reif, Zwetschgen reif, Herbstzeitlose blüht{% elif ph == "Vollherbst" %}Eicheln fallen, Kartoffelernte, Laubverfärbung beginnt{% elif ph == "Spätherbst" %}Stieleiche Blattfall, Laubfall allgemein, letzte Ernte{% elif ph == "Winter" %}Vegetationsruhe, kein Blattwachstum, Boden gefroren{% endif %}</td>
+                <td>{% if ph == "Vorfrühling" %}Feb – Mär{% elif ph == "Erstfrühling" %}Mär – Apr{% elif ph == "Vollfrühling" %}Apr – Mai{% elif ph == "Frühsommer" %}Mai – Jun{% elif ph == "Hochsommer" %}Jun – Jul{% elif ph == "Spätsommer" %}Jul – Aug{% elif ph == "Frühherbst" %}Aug – Sep{% elif ph == "Vollherbst" %}Sep – Okt{% elif ph == "Spätherbst" %}Okt – Nov{% elif ph == "Winter" %}Nov – Feb{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</details>
+
 <div class="card">
     <h3 style="margin-top:0">Phasen für {{ selected_year }}</h3>
 
@@ -40,7 +62,7 @@
         <tbody>
         {% for p in phasen %}
             <tr{% if aktuelle_phase == p.phase and selected_year == now_year %} style="background:var(--green-pale)"{% endif %}>
-                <td><strong>{{ p.phase }}</strong></td>
+                <td><strong>{{ phasen_icons.get(p.phase, '') }} {{ p.phase }}</strong></td>
                 <td>{% if p.start_detail %}{{ p.start_detail }} {% endif %}{{ german_months[p.startmonat] }}</td>
                 <td>
                     <form method="post" action="/phaenologie/{{ p.id }}/remove" style="display:inline">
@@ -64,7 +86,7 @@
                 <label>Phase</label>
                 <select name="phase" required>
                     {% for ph in alle_phasen %}
-                    <option value="{{ ph }}">{{ ph }}</option>
+                    <option value="{{ ph }}">{{ phasen_icons.get(ph, '') }} {{ ph }}</option>
                     {% endfor %}
                 </select>
             </div>
