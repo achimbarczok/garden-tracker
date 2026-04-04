@@ -92,6 +92,23 @@
                 <option value="Schatten">Schatten</option>
             </select>
         </label>
+        <label>Lebensdauer:
+            <select name="lebensdauer">
+                <option value="">– bitte wählen –</option>
+                <option value="Einjährig">Einjährig</option>
+                <option value="Zweijährig">Zweijährig</option>
+                <option value="Mehrjährig">Mehrjährig</option>
+            </select>
+        </label>
+        <label>Pflanzmonat:
+            <select name="pflanzmonat">
+                <option value="">–</option>
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Pflanzjahr: <input type="number" name="pflanzjahr" min="2000" max="2100" placeholder="z.B. 2025"></label>
         <label>Kommentar: <textarea name="kommentar" rows="2"></textarea></label>
         <button type="submit">Hinzufügen</button>
     </form>

@@ -28,6 +28,26 @@
                 {% endfor %}
             </select>
         </label>
+        <label>Lebensdauer:
+            <select name="lebensdauer">
+                <option value="">– bitte wählen –</option>
+                {% for val in ["Einjährig", "Zweijährig", "Mehrjährig"] %}
+                <option value="{{ val }}" {% if plant.lebensdauer == val %}selected{% endif %}>{{ val }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Pflanzmonat:
+            <select name="pflanzmonat">
+                <option value="">–</option>
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}" {% if plant.pflanzmonat == num %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Pflanzjahr:
+            <input type="number" name="pflanzjahr" min="2000" max="2100"
+                   value="{{ plant.pflanzjahr or '' }}" placeholder="z.B. 2025">
+        </label>
         <label>Kommentar:
             <textarea name="kommentar" rows="3">{{ plant.kommentar or '' }}</textarea>
         </label>

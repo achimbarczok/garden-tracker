@@ -17,6 +17,7 @@ GERMAN_MONTHS = {
 
 VALID_LICHTBEDARF = {"Sonne", "Halbschatten", "Schatten"}
 VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt"}
+VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
 
 app = Flask(__name__)
 
@@ -47,6 +48,13 @@ def add():
     variety = request.form.get("variety", "").strip() or None
     lichtbedarf = request.form.get("lichtbedarf", "").strip()
     kommentar = request.form.get("kommentar", "").strip() or None
+    lebensdauer = request.form.get("lebensdauer", "").strip() or None
+    try:
+        pflanzmonat = int(request.form.get("pflanzmonat", "")) if request.form.get("pflanzmonat") else None
+        pflanzjahr = int(request.form.get("pflanzjahr", "")) if request.form.get("pflanzjahr") else None
+    except ValueError:
+        pflanzmonat = None
+        pflanzjahr = None
 
     if not name or not plant_type:
         plants = get_all_plants()
@@ -72,7 +80,7 @@ def add():
             400,
         )
 
-    add_plant(name, plant_type, variety, lichtbedarf, kommentar)
+    add_plant(name, plant_type, variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr)
     return redirect(url_for("index"))
 
 
@@ -86,6 +94,7 @@ def edit_route(plant_id: int):
         plant=plant,
         german_months=GERMAN_MONTHS,
         valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+        valid_lebensdauer=sorted(VALID_LEBENSDAUER),
     )
 
 
@@ -100,6 +109,13 @@ def edit_save(plant_id: int):
     variety = request.form.get("variety", "").strip() or None
     lichtbedarf = request.form.get("lichtbedarf", "").strip()
     kommentar = request.form.get("kommentar", "").strip() or None
+    lebensdauer = request.form.get("lebensdauer", "").strip() or None
+    try:
+        pflanzmonat = int(request.form.get("pflanzmonat", "")) if request.form.get("pflanzmonat") else None
+        pflanzjahr = int(request.form.get("pflanzjahr", "")) if request.form.get("pflanzjahr") else None
+    except ValueError:
+        pflanzmonat = None
+        pflanzjahr = None
 
     if not name or not plant_type:
         return (
@@ -108,6 +124,7 @@ def edit_save(plant_id: int):
                 plant=plant,
                 german_months=GERMAN_MONTHS,
                 valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                valid_lebensdauer=sorted(VALID_LEBENSDAUER),
                 error="Name und Typ dürfen nicht leer sein.",
             ),
             400,
@@ -120,12 +137,13 @@ def edit_save(plant_id: int):
                 plant=plant,
                 german_months=GERMAN_MONTHS,
                 valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                valid_lebensdauer=sorted(VALID_LEBENSDAUER),
                 error="Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.",
             ),
             400,
         )
 
-    update_plant(plant_id, name, plant_type, variety, lichtbedarf, kommentar)
+    update_plant(plant_id, name, plant_type, variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr)
     return redirect(url_for("index"))
 
 
