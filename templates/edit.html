@@ -102,7 +102,7 @@
         {% for e in plant.ereignisse %}
         <li>
             <span class="ereignis-tag">{{ e.ereignistyp }}</span>
-            {% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }} – {% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}
+            {% if e.startmonat == e.endmonat and e.start_detail == e.end_detail %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}{% else %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }} – {% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}{% endif %}
             <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline;margin-left:.25rem">
                 <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
                 <button type="submit" class="btn btn-ghost btn-sm">✕</button>
@@ -163,7 +163,7 @@
             <span class="beob-year">{{ b.jahr }}</span>
             <div class="beob-details">
                 <span class="ereignis-tag">{{ b.ereignistyp }}</span>
-                {% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }} – {% if b.end_detail %}{{ b.end_detail }} {% endif %}{{ german_months[b.endmonat] }}
+                {% if b.startmonat == b.endmonat and b.start_detail == b.end_detail %}{% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }}{% else %}{% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }} – {% if b.end_detail %}{{ b.end_detail }} {% endif %}{{ german_months[b.endmonat] }}{% endif %}
                 {% if b.phaenologische_phase %}
                 <span class="beob-phase"> · {{ b.phaenologische_phase }}</span>
                 {% endif %}
