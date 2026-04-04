@@ -18,8 +18,17 @@
             <input type="text" name="name" value="{{ plant.name }}" required>
         </div>
         <div class="form-field">
-            <label>Typ *</label>
-            <input type="text" name="type" value="{{ plant.type }}" required>
+            <label>Kategorie *</label>
+            <select name="kategorie" required>
+                <option value="">– bitte wählen –</option>
+                {% for k in valid_kategorien %}
+                <option value="{{ k }}" {% if plant.kategorie == k %}selected{% endif %}>{{ k }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label>Typ</label>
+            <input type="text" name="type" value="{{ plant.type or '' }}" placeholder="z.B. Beerenobst">
         </div>
         <div class="form-field">
             <label>Sorte</label>
@@ -56,6 +65,11 @@
             <label>Pflanzjahr</label>
             <input type="number" name="pflanzjahr" min="2000" max="2100"
                    value="{{ plant.pflanzjahr or '' }}" placeholder="z.B. 2025">
+        </div>
+        <div class="form-field">
+            <label>Anzahl</label>
+            <input type="number" name="anzahl" min="1"
+                   value="{{ plant.anzahl or 1 }}">
         </div>
         <div class="form-field" style="grid-column: 1 / -1">
             <label>Kommentar</label>

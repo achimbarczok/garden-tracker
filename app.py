@@ -20,6 +20,7 @@ GERMAN_MONTHS = {
 VALID_LICHTBEDARF = {"Sonne", "Halbschatten", "Schatten"}
 VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt"}
 VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
+VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung"]
 
 app = Flask(__name__)
 
@@ -40,13 +41,14 @@ def _safe_next(next_url: str) -> str:
 @app.route("/")
 def index():
     plants = get_all_plants()
-    return render_template("index.html", plants=plants, german_months=GERMAN_MONTHS)
+    return render_template("index.html", plants=plants, german_months=GERMAN_MONTHS, valid_kategorien=VALID_KATEGORIEN)
 
 
 @app.route("/add", methods=["POST"])
 def add():
     name = request.form.get("name", "").strip()
-    plant_type = request.form.get("type", "").strip()
+    plant_type = request.form.get("type", "").strip() or None
+    kategorie = request.form.get("kategorie", "").strip()
     variety = request.form.get("variety", "").strip() or None
     lichtbedarf = request.form.get("lichtbedarf", "").strip()
     kommentar = request.form.get("kommentar", "").strip() or None
@@ -58,14 +60,28 @@ def add():
         pflanzmonat = None
         pflanzjahr = None
 
-    if not name or not plant_type:
+    if not name:
         plants = get_all_plants()
         return (
             render_template(
                 "index.html",
                 plants=plants,
                 german_months=GERMAN_MONTHS,
-                error="Name und Typ dürfen nicht leer sein.",
+                valid_kategorien=VALID_KATEGORIEN,
+                error="Name darf nicht leer sein.",
+            ),
+            400,
+        )
+
+    if kategorie not in VALID_KATEGORIEN:
+        plants = get_all_plants()
+        return (
+            render_template(
+                "index.html",
+                plants=plants,
+                german_months=GERMAN_MONTHS,
+                valid_kategorien=VALID_KATEGORIEN,
+                error="Bitte eine gültige Kategorie wählen.",
             ),
             400,
         )
@@ -77,12 +93,14 @@ def add():
                 "index.html",
                 plants=plants,
                 german_months=GERMAN_MONTHS,
+                valid_kategorien=VALID_KATEGORIEN,
                 error="Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.",
             ),
             400,
         )
 
-    add_plant(name, plant_type, variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr)
+    add_plant(name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
+              int(request.form.get("anzahl", 1) or 1), kategorie)
     return redirect(url_for("index"))
 
 
@@ -97,6 +115,7 @@ def edit_route(plant_id: int):
         german_months=GERMAN_MONTHS,
         valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
         valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+        valid_kategorien=VALID_KATEGORIEN,
         now_year=date.today().year,
     )
 
@@ -108,7 +127,8 @@ def edit_save(plant_id: int):
         abort(404)
 
     name = request.form.get("name", "").strip()
-    plant_type = request.form.get("type", "").strip()
+    plant_type = request.form.get("type", "").strip() or None
+    kategorie = request.form.get("kategorie", "").strip()
     variety = request.form.get("variety", "").strip() or None
     lichtbedarf = request.form.get("lichtbedarf", "").strip()
     kommentar = request.form.get("kommentar", "").strip() or None
@@ -120,7 +140,7 @@ def edit_save(plant_id: int):
         pflanzmonat = None
         pflanzjahr = None
 
-    if not name or not plant_type:
+    if not name:
         return (
             render_template(
                 "edit.html",
@@ -128,7 +148,22 @@ def edit_save(plant_id: int):
                 german_months=GERMAN_MONTHS,
                 valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
                 valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                error="Name und Typ dürfen nicht leer sein.",
+                valid_kategorien=VALID_KATEGORIEN,
+                error="Name darf nicht leer sein.",
+            ),
+            400,
+        )
+
+    if kategorie not in VALID_KATEGORIEN:
+        return (
+            render_template(
+                "edit.html",
+                plant=plant,
+                german_months=GERMAN_MONTHS,
+                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+                valid_kategorien=VALID_KATEGORIEN,
+                error="Bitte eine gültige Kategorie wählen.",
             ),
             400,
         )
@@ -141,12 +176,14 @@ def edit_save(plant_id: int):
                 german_months=GERMAN_MONTHS,
                 valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
                 valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+                valid_kategorien=VALID_KATEGORIEN,
                 error="Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.",
             ),
             400,
         )
 
-    update_plant(plant_id, name, plant_type, variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr)
+    update_plant(plant_id, name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
+                 int(request.form.get("anzahl", 1) or 1), kategorie)
     return redirect(url_for("index"))
 
 

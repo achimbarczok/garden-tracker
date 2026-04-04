@@ -23,6 +23,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE plants ADD COLUMN pflanzmonat INTEGER")
     if "pflanzjahr" not in cols:
         conn.execute("ALTER TABLE plants ADD COLUMN pflanzjahr INTEGER")
+    if "anzahl" not in cols:
+        conn.execute("ALTER TABLE plants ADD COLUMN anzahl INTEGER DEFAULT 1")
+    if "kategorie" not in cols:
+        conn.execute("ALTER TABLE plants ADD COLUMN kategorie TEXT")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS ereignisse (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,7 +71,7 @@ def get_all_plants() -> list[dict]:
     with get_db() as conn:
         rows = conn.execute(
             "SELECT id, name, type, variety, lichtbedarf, kommentar, "
-            "lebensdauer, pflanzmonat, pflanzjahr FROM plants"
+            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie FROM plants"
         ).fetchall()
         plants = []
         for row in rows:
@@ -86,18 +90,22 @@ def add_plant(name: str, type: str, variety: str | None,
               lichtbedarf: str, kommentar: str | None,
               lebensdauer: str | None = None,
               pflanzmonat: int | None = None,
-              pflanzjahr: int | None = None) -> None:
+              pflanzjahr: int | None = None,
+              anzahl: int = 1,
+              kategorie: str | None = None) -> None:
     if variety == "":
         variety = None
     if kommentar == "":
         kommentar = None
+    if type == "":
+        type = None
     with get_db() as conn:
         conn.execute(
             "INSERT INTO plants (name, type, variety, lichtbedarf, kommentar, "
-            "lebensdauer, pflanzmonat, pflanzjahr) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (name, type, variety, lichtbedarf, kommentar,
-             lebensdauer, pflanzmonat, pflanzjahr),
+             lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie),
         )
         conn.commit()
 
@@ -129,7 +137,7 @@ def get_plant(plant_id: int) -> dict | None:
     with get_db() as conn:
         row = conn.execute(
             "SELECT id, name, type, variety, lichtbedarf, kommentar, "
-            "lebensdauer, pflanzmonat, pflanzjahr "
+            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie "
             "FROM plants WHERE id = ?",
             (plant_id,),
         ).fetchone()
@@ -156,18 +164,22 @@ def update_plant(plant_id: int, name: str, type: str, variety: str | None,
                  lichtbedarf: str, kommentar: str | None,
                  lebensdauer: str | None = None,
                  pflanzmonat: int | None = None,
-                 pflanzjahr: int | None = None) -> None:
+                 pflanzjahr: int | None = None,
+                 anzahl: int = 1,
+                 kategorie: str | None = None) -> None:
     if variety == "":
         variety = None
     if kommentar == "":
         kommentar = None
+    if type == "":
+        type = None
     with get_db() as conn:
         conn.execute(
             "UPDATE plants SET name = ?, type = ?, variety = ?, "
             "lichtbedarf = ?, kommentar = ?, lebensdauer = ?, "
-            "pflanzmonat = ?, pflanzjahr = ? WHERE id = ?",
+            "pflanzmonat = ?, pflanzjahr = ?, anzahl = ?, kategorie = ? WHERE id = ?",
             (name, type, variety, lichtbedarf, kommentar,
-             lebensdauer, pflanzmonat, pflanzjahr, plant_id),
+             lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, plant_id),
         )
         conn.commit()
 

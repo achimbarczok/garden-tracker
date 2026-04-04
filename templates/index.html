@@ -13,7 +13,8 @@
     <thead>
         <tr>
             <th>Name</th>
-            <th>Typ / Sorte</th>
+            <th>Kategorie</th>
+            <th class="hide-mobile">Typ / Sorte</th>
             <th>Lichtbedarf</th>
             <th class="hide-mobile">Lebensdauer</th>
             <th class="hide-mobile">Gepflanzt</th>
@@ -24,9 +25,10 @@
     <tbody>
     {% for plant in plants %}
         <tr>
-            <td><strong>{{ plant.name }}</strong></td>
-            <td>
-                {{ plant.type }}
+            <td><strong>{{ plant.name }}</strong>{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
+            <td>{{ plant.kategorie or '' }}</td>
+            <td class="hide-mobile">
+                {% if plant.type %}{{ plant.type }}{% endif %}
                 {% if plant.variety %}<br><span style="color:var(--text-muted);font-size:.8rem">{{ plant.variety }}</span>{% endif %}
             </td>
             <td>
@@ -101,8 +103,17 @@
             <input type="text" name="name" placeholder="z.B. Erdbeere" required>
         </div>
         <div class="form-field">
-            <label>Typ *</label>
-            <input type="text" name="type" placeholder="z.B. Obst" required>
+            <label>Kategorie *</label>
+            <select name="kategorie" required>
+                <option value="">– bitte wählen –</option>
+                {% for k in valid_kategorien %}
+                <option value="{{ k }}">{{ k }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label>Typ</label>
+            <input type="text" name="type" placeholder="z.B. Beerenobst">
         </div>
         <div class="form-field">
             <label>Sorte</label>
@@ -138,6 +149,10 @@
         <div class="form-field">
             <label>Pflanzjahr</label>
             <input type="number" name="pflanzjahr" min="2000" max="2100" placeholder="z.B. 2025">
+        </div>
+        <div class="form-field">
+            <label>Anzahl</label>
+            <input type="number" name="anzahl" min="1" value="1" placeholder="1">
         </div>
         <div class="form-field" style="grid-column: 1 / -1">
             <label>Kommentar</label>
