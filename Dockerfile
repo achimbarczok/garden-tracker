@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM --platform=linux/arm64 python:3.12-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN useradd -m appuser
+RUN useradd -m appuser && mkdir -p /data && chown appuser /data
 USER appuser
 
 ENV PORT=5000
