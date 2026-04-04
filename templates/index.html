@@ -13,11 +13,11 @@
             <tr>
                 <th>Name</th>
                 <th>Typ</th>
-                <th>Sorte</th>
+                <th class="hide-mobile">Sorte</th>
                 <th>Lichtbedarf</th>
-                <th>Kommentar</th>
-                <th>Ereignisse</th>
-                <th>Ereignis hinzufügen</th>
+                <th class="hide-mobile">Kommentar</th>
+                <th class="hide-mobile">Ereignisse</th>
+                <th class="hide-mobile">Ereignis hinzufügen</th>
                 <th>Aktion</th>
             </tr>
         </thead>
@@ -26,10 +26,10 @@
             <tr>
                 <td>{{ plant.name }}</td>
                 <td>{{ plant.type }}</td>
-                <td>{{ plant.variety if plant.variety else '' }}</td>
+                <td class="hide-mobile">{{ plant.variety if plant.variety else '' }}</td>
                 <td>{{ plant.lichtbedarf if plant.lichtbedarf else '' }}</td>
-                <td>{{ plant.kommentar if plant.kommentar else '' }}</td>
-                <td>
+                <td class="hide-mobile">{{ plant.kommentar if plant.kommentar else '' }}</td>
+                <td class="hide-mobile">
                     {% if plant.ereignisse %}
                     <ul class="ereignisse">
                         {% for e in plant.ereignisse %}
@@ -43,7 +43,7 @@
                     </ul>
                     {% endif %}
                 </td>
-                <td>
+                <td class="hide-mobile">
                     <form method="post" action="/plant/{{ plant.id }}/ereignis/add" class="form-inline">
                         <select name="ereignistyp">
                             <option value="Blüte">Blüte</option>
@@ -66,6 +66,7 @@
                     </form>
                 </td>
                 <td>
+                    <a href="/plant/{{ plant.id }}/edit">Bearbeiten</a>
                     <form method="post" action="/remove/{{ plant.id }}">
                         <button type="submit">Entfernen</button>
                     </form>

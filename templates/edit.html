@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="edit-page">
+    <a href="/" class="back-link">← Zurück zur Übersicht</a>
+
+    <h1>{{ plant.name }} bearbeiten</h1>
+
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="/plant/{{ plant.id }}/edit" class="form-add">
+        <label>Name:
+            <input type="text" name="name" value="{{ plant.name }}" required>
+        </label>
+        <label>Typ:
+            <input type="text" name="type" value="{{ plant.type }}" required>
+        </label>
+        <label>Sorte:
+            <input type="text" name="variety" value="{{ plant.variety or '' }}">
+        </label>
+        <label>Lichtbedarf:
+            <select name="lichtbedarf" required>
+                <option value="">– bitte wählen –</option>
+                {% for val in ["Sonne", "Halbschatten", "Schatten"] %}
+                <option value="{{ val }}" {% if plant.lichtbedarf == val %}selected{% endif %}>{{ val }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Kommentar:
+            <textarea name="kommentar" rows="3">{{ plant.kommentar or '' }}</textarea>
+        </label>
+        <button type="submit">Speichern</button>
+    </form>
+
+    <h2>Ereignisse</h2>
+
+    {% if plant.ereignisse %}
+    <ul class="ereignisse">
+        {% for e in plant.ereignisse %}
+        <li>
+            <span>{{ e.ereignistyp }}: {{ german_months[e.startmonat] }}–{{ german_months[e.endmonat] }}</span>
+            <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline">
+                <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
+                <button type="submit" class="btn-small">✕</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>Keine Ereignisse vorhanden.</p>
+    {% endif %}
+
+    <h3>Ereignis hinzufügen</h3>
+    <form method="post" action="/plant/{{ plant.id }}/ereignis/add" class="form-inline">
+        <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
+        <label>Typ:
+            <select name="ereignistyp">
+                <option value="Blüte">Blüte</option>
+                <option value="Ernte">Ernte</option>
+                <option value="Düngen">Düngen</option>
+                <option value="Rückschnitt">Rückschnitt</option>
+            </select>
+        </label>
+        <label>Von:
+            <select name="startmonat">
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Bis:
+            <select name="endmonat">
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit">Hinzufügen</button>
+    </form>
+</div>
+{% endblock %}

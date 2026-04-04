@@ -99,3 +99,37 @@ def remove_ereignis(ereignis_id: int) -> None:
     with get_db() as conn:
         conn.execute("DELETE FROM ereignisse WHERE id = ?", (ereignis_id,))
         conn.commit()
+
+
+def get_plant(plant_id: int) -> dict | None:
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, name, type, variety, lichtbedarf, kommentar "
+            "FROM plants WHERE id = ?",
+            (plant_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        plant = dict(row)
+        ereignisse = conn.execute(
+            "SELECT id, plant_id, ereignistyp, startmonat, endmonat "
+            "FROM ereignisse WHERE plant_id = ?",
+            (plant_id,),
+        ).fetchall()
+        plant["ereignisse"] = [dict(e) for e in ereignisse]
+    return plant
+
+
+def update_plant(plant_id: int, name: str, type: str, variety: str | None,
+                 lichtbedarf: str, kommentar: str | None) -> None:
+    if variety == "":
+        variety = None
+    if kommentar == "":
+        kommentar = None
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE plants SET name = ?, type = ?, variety = ?, "
+            "lichtbedarf = ?, kommentar = ? WHERE id = ?",
+            (name, type, variety, lichtbedarf, kommentar, plant_id),
+        )
+        conn.commit()
