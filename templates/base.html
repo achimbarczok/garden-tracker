@@ -7,6 +7,14 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    {% block content %}{% endblock %}
+    <header>
+        <div class="page-wrap" style="padding-top:0;padding-bottom:0;">
+            <h1>🌱 Garten-Tracker</h1>
+            <p class="subtitle">Mein persönlicher Gartenkalender</p>
+        </div>
+    </header>
+    <div class="page-wrap">
+        {% block content %}{% endblock %}
+    </div>
 </body>
 </html>

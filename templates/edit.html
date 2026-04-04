@@ -1,162 +1,208 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="edit-page">
-    <a href="/" class="back-link">← Zurück zur Übersicht</a>
 
-    <h1>{{ plant.name }} bearbeiten</h1>
+<a href="/" class="back-link">← Zurück zur Übersicht</a>
 
-    {% if error %}
-    <p class="error">{{ error }}</p>
-    {% endif %}
+<h2>{{ plant.name }} bearbeiten</h2>
 
-    <form method="post" action="/plant/{{ plant.id }}/edit" class="form-add">
-        <label>Name:
+{% if error %}
+<div class="alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="card">
+<form method="post" action="/plant/{{ plant.id }}/edit">
+    <div class="form-grid">
+        <div class="form-field">
+            <label>Name *</label>
             <input type="text" name="name" value="{{ plant.name }}" required>
-        </label>
-        <label>Typ:
+        </div>
+        <div class="form-field">
+            <label>Typ *</label>
             <input type="text" name="type" value="{{ plant.type }}" required>
-        </label>
-        <label>Sorte:
+        </div>
+        <div class="form-field">
+            <label>Sorte</label>
             <input type="text" name="variety" value="{{ plant.variety or '' }}">
-        </label>
-        <label>Lichtbedarf:
+        </div>
+        <div class="form-field">
+            <label>Lichtbedarf *</label>
             <select name="lichtbedarf" required>
                 <option value="">– bitte wählen –</option>
                 {% for val in ["Sonne", "Halbschatten", "Schatten"] %}
                 <option value="{{ val }}" {% if plant.lichtbedarf == val %}selected{% endif %}>{{ val }}</option>
                 {% endfor %}
             </select>
-        </label>
-        <label>Lebensdauer:
+        </div>
+        <div class="form-field">
+            <label>Lebensdauer</label>
             <select name="lebensdauer">
                 <option value="">– bitte wählen –</option>
                 {% for val in ["Einjährig", "Zweijährig", "Mehrjährig"] %}
                 <option value="{{ val }}" {% if plant.lebensdauer == val %}selected{% endif %}>{{ val }}</option>
                 {% endfor %}
             </select>
-        </label>
-        <label>Pflanzmonat:
+        </div>
+        <div class="form-field">
+            <label>Pflanzmonat</label>
             <select name="pflanzmonat">
                 <option value="">–</option>
                 {% for num, name in german_months.items() %}
                 <option value="{{ num }}" {% if plant.pflanzmonat == num %}selected{% endif %}>{{ name }}</option>
                 {% endfor %}
             </select>
-        </label>
-        <label>Pflanzjahr:
+        </div>
+        <div class="form-field">
+            <label>Pflanzjahr</label>
             <input type="number" name="pflanzjahr" min="2000" max="2100"
                    value="{{ plant.pflanzjahr or '' }}" placeholder="z.B. 2025">
-        </label>
-        <label>Kommentar:
-            <textarea name="kommentar" rows="3">{{ plant.kommentar or '' }}</textarea>
-        </label>
-        <button type="submit">Speichern</button>
-    </form>
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1">
+            <label>Kommentar</label>
+            <textarea name="kommentar">{{ plant.kommentar or '' }}</textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">💾 Speichern</button>
+        <a href="/" class="btn btn-ghost">Abbrechen</a>
+    </div>
+</form>
+</div>
 
-    <h2>Ereignisse</h2>
-
+<!-- Ereignisse -->
+<h2>🗓️ Erwartete Ereignisse</h2>
+<div class="card">
     {% if plant.ereignisse %}
-    <ul class="ereignisse">
+    <ul class="ereignisse" style="margin-bottom:1rem">
         {% for e in plant.ereignisse %}
         <li>
-            <span>{{ e.ereignistyp }}: {{ german_months[e.startmonat] }}–{{ german_months[e.endmonat] }}</span>
-            <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline">
+            <span class="ereignis-tag">{{ e.ereignistyp }}</span>
+            {{ german_months[e.startmonat] }} – {{ german_months[e.endmonat] }}
+            <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline;margin-left:.25rem">
                 <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
-                <button type="submit" class="btn-small">✕</button>
+                <button type="submit" class="btn btn-ghost btn-sm">✕</button>
             </form>
         </li>
         {% endfor %}
     </ul>
     {% else %}
-    <p>Keine Ereignisse vorhanden.</p>
+    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Ereignisse eingetragen.</p>
     {% endif %}
 
     <h3>Ereignis hinzufügen</h3>
-    <form method="post" action="/plant/{{ plant.id }}/ereignis/add" class="form-inline">
+    <form method="post" action="/plant/{{ plant.id }}/ereignis/add">
         <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
-        <label>Typ:
+        <div class="form-inline-row">
             <select name="ereignistyp">
-                <option value="Blüte">Blüte</option>
-                <option value="Ernte">Ernte</option>
-                <option value="Düngen">Düngen</option>
-                <option value="Rückschnitt">Rückschnitt</option>
+                <option value="Blüte">🌸 Blüte</option>
+                <option value="Ernte">🍓 Ernte</option>
+                <option value="Düngen">🌿 Düngen</option>
+                <option value="Rückschnitt">✂️ Rückschnitt</option>
             </select>
-        </label>
-        <label>Von:
             <select name="startmonat">
                 {% for num, name in german_months.items() %}
                 <option value="{{ num }}">{{ name }}</option>
                 {% endfor %}
             </select>
-        </label>
-        <label>Bis:
+            <span style="align-self:center;color:var(--text-muted)">–</span>
             <select name="endmonat">
                 {% for num, name in german_months.items() %}
                 <option value="{{ num }}">{{ name }}</option>
                 {% endfor %}
             </select>
-        </label>
-        <button type="submit">Hinzufügen</button>
+            <button type="submit" class="btn btn-primary btn-sm">+ Hinzufügen</button>
+        </div>
     </form>
+</div>
 
-    <h2>Beobachtungen</h2>
-
+<!-- Beobachtungen -->
+<h2>🔍 Beobachtungen</h2>
+<div class="card">
     {% if plant.beobachtungen %}
-    <ul class="ereignisse">
+    <div style="margin-bottom:1rem">
         {% for b in plant.beobachtungen %}
-        <li>
-            <strong>{{ b.jahr }}</strong> — {{ b.ereignistyp }}:
-            {{ german_months[b.startmonat] }}–{{ german_months[b.endmonat] }}
-            {% if b.phaenologische_phase %} · {{ b.phaenologische_phase }}{% endif %}
-            {% if b.notiz %} · <em>{{ b.notiz }}</em>{% endif %}
-            <form method="post" action="/beobachtung/{{ b.id }}/remove" style="display:inline">
+        <div class="beobachtung-item">
+            <span class="beob-year">{{ b.jahr }}</span>
+            <div class="beob-details">
+                <span class="ereignis-tag">{{ b.ereignistyp }}</span>
+                {{ german_months[b.startmonat] }} – {{ german_months[b.endmonat] }}
+                {% if b.phaenologische_phase %}
+                <span class="beob-phase"> · {{ b.phaenologische_phase }}</span>
+                {% endif %}
+                {% if b.notiz %}
+                <br><span class="beob-notiz">{{ b.notiz }}</span>
+                {% endif %}
+            </div>
+            <form method="post" action="/beobachtung/{{ b.id }}/remove">
                 <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
-                <button type="submit" class="btn-small">✕</button>
+                <button type="submit" class="btn btn-ghost btn-sm">✕</button>
             </form>
-        </li>
+        </div>
         {% endfor %}
-    </ul>
+    </div>
     {% else %}
-    <p>Noch keine Beobachtungen eingetragen.</p>
+    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Beobachtungen eingetragen.</p>
     {% endif %}
 
     <h3>Beobachtung hinzufügen</h3>
-    <form method="post" action="/plant/{{ plant.id }}/beobachtung/add" class="form-add">
+    <form method="post" action="/plant/{{ plant.id }}/beobachtung/add">
         <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
-        <label>Jahr:
-            <input type="number" name="jahr" min="2000" max="2100"
-                   value="{{ now_year }}" placeholder="z.B. 2025" required>
-        </label>
-        <label>Ereignistyp:
-            <select name="ereignistyp">
-                <option value="Blüte">Blüte</option>
-                <option value="Ernte">Ernte</option>
-                <option value="Düngen">Düngen</option>
-                <option value="Rückschnitt">Rückschnitt</option>
-            </select>
-        </label>
-        <label>Von:
-            <select name="startmonat">
-                {% for num, name in german_months.items() %}
-                <option value="{{ num }}">{{ name }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Bis:
-            <select name="endmonat">
-                {% for num, name in german_months.items() %}
-                <option value="{{ num }}">{{ name }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Phänologische Phase:
-            <input type="text" name="phaenologische_phase" placeholder="z.B. Vollfrühling">
-        </label>
-        <label>Notiz:
-            <input type="text" name="notiz" placeholder="z.B. sehr früh wegen warmem März">
-        </label>
-        <button type="submit">Beobachtung speichern</button>
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Jahr *</label>
+                <input type="number" name="jahr" min="2000" max="2100"
+                       value="{{ now_year }}" required>
+            </div>
+            <div class="form-field">
+                <label>Ereignistyp</label>
+                <select name="ereignistyp">
+                    <option value="Blüte">🌸 Blüte</option>
+                    <option value="Ernte">🍓 Ernte</option>
+                    <option value="Düngen">🌿 Düngen</option>
+                    <option value="Rückschnitt">✂️ Rückschnitt</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Von</label>
+                <select name="startmonat">
+                    {% for num, name in german_months.items() %}
+                    <option value="{{ num }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Bis</label>
+                <select name="endmonat">
+                    {% for num, name in german_months.items() %}
+                    <option value="{{ num }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Phänologische Phase</label>
+                <input type="text" name="phaenologische_phase" placeholder="z.B. Vollfrühling">
+            </div>
+            <div class="form-field">
+                <label>Notiz</label>
+                <input type="text" name="notiz" placeholder="z.B. sehr früh wegen warmem März">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">🔍 Beobachtung speichern</button>
+        </div>
     </form>
 </div>
+
+<!-- Pflanze löschen -->
+<h2>⚠️ Pflanze entfernen</h2>
+<div class="card" style="border-color:#f5c6cb">
+    <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:.75rem">
+        Diese Aktion löscht die Pflanze samt allen Ereignissen und Beobachtungen unwiderruflich.
+    </p>
+    <form method="post" action="/remove/{{ plant.id }}">
+        <button type="submit" class="btn btn-danger btn-sm"
+                onclick="return confirm('{{ plant.name }} wirklich löschen?')">🗑️ Pflanze löschen</button>
+    </form>
+</div>
+
 {% endblock %}

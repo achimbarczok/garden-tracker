@@ -1,115 +1,153 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Meine Pflanzen</h1>
 
-    {% if error %}
-    <p class="error">{{ error }}</p>
-    {% endif %}
+{% if error %}
+<div class="alert-error">{{ error }}</div>
+{% endif %}
 
-    {% if plants %}
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Typ</th>
-                <th class="hide-mobile">Sorte</th>
-                <th>Lichtbedarf</th>
-                <th class="hide-mobile">Kommentar</th>
-                <th class="hide-mobile">Ereignisse</th>
-                <th class="hide-mobile">Ereignis hinzufügen</th>
-                <th>Aktion</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for plant in plants %}
-            <tr>
-                <td>{{ plant.name }}</td>
-                <td>{{ plant.type }}</td>
-                <td class="hide-mobile">{{ plant.variety if plant.variety else '' }}</td>
-                <td>{{ plant.lichtbedarf if plant.lichtbedarf else '' }}</td>
-                <td class="hide-mobile">{{ plant.kommentar if plant.kommentar else '' }}</td>
-                <td class="hide-mobile">
-                    {% if plant.ereignisse %}
-                    <ul class="ereignisse">
-                        {% for e in plant.ereignisse %}
-                        <li>
-                            {{ e.ereignistyp }}: {{ german_months[e.startmonat] }}–{{ german_months[e.endmonat] }}
-                            <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline">
-                                <button type="submit" class="btn-small">✕</button>
-                            </form>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                </td>
-                <td class="hide-mobile">
-                    <form method="post" action="/plant/{{ plant.id }}/ereignis/add" class="form-inline">
-                        <select name="ereignistyp">
-                            <option value="Blüte">Blüte</option>
-                            <option value="Ernte">Ernte</option>
-                            <option value="Düngen">Düngen</option>
-                            <option value="Rückschnitt">Rückschnitt</option>
-                        </select>
-                        <select name="startmonat">
-                            {% for num, name in german_months.items() %}
-                            <option value="{{ num }}">{{ name }}</option>
-                            {% endfor %}
-                        </select>
-                        <span>–</span>
-                        <select name="endmonat">
-                            {% for num, name in german_months.items() %}
-                            <option value="{{ num }}">{{ name }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit">+</button>
+{% if plants %}
+<h2>Meine Pflanzen</h2>
+<div class="table-wrap">
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Typ / Sorte</th>
+            <th>Lichtbedarf</th>
+            <th class="hide-mobile">Lebensdauer</th>
+            <th class="hide-mobile">Gepflanzt</th>
+            <th class="hide-mobile">Ereignisse</th>
+            <th>Aktionen</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for plant in plants %}
+        <tr>
+            <td><strong>{{ plant.name }}</strong></td>
+            <td>
+                {{ plant.type }}
+                {% if plant.variety %}<br><span style="color:var(--text-muted);font-size:.8rem">{{ plant.variety }}</span>{% endif %}
+            </td>
+            <td>
+                {% if plant.lichtbedarf == "Sonne" %}
+                    <span class="badge badge-sun">☀️ Sonne</span>
+                {% elif plant.lichtbedarf == "Halbschatten" %}
+                    <span class="badge badge-half">⛅ Halbschatten</span>
+                {% elif plant.lichtbedarf == "Schatten" %}
+                    <span class="badge badge-shade">🌥️ Schatten</span>
+                {% endif %}
+            </td>
+            <td class="hide-mobile">
+                {% if plant.lebensdauer == "Einjährig" %}
+                    <span class="badge badge-annual">Einjährig</span>
+                {% elif plant.lebensdauer == "Zweijährig" %}
+                    <span class="badge badge-bi">Zweijährig</span>
+                {% elif plant.lebensdauer == "Mehrjährig" %}
+                    <span class="badge badge-peren">Mehrjährig</span>
+                {% endif %}
+            </td>
+            <td class="hide-mobile">
+                {% if plant.pflanzmonat and plant.pflanzjahr %}
+                    {{ german_months[plant.pflanzmonat] }} {{ plant.pflanzjahr }}
+                {% elif plant.pflanzjahr %}
+                    {{ plant.pflanzjahr }}
+                {% elif plant.pflanzmonat %}
+                    {{ german_months[plant.pflanzmonat] }}
+                {% endif %}
+            </td>
+            <td class="hide-mobile">
+                {% if plant.ereignisse %}
+                <ul class="ereignisse">
+                    {% for e in plant.ereignisse %}
+                    <li>
+                        <span class="ereignis-tag">{{ e.ereignistyp }}</span>
+                        {{ german_months[e.startmonat] }}–{{ german_months[e.endmonat] }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <span style="color:var(--text-muted);font-size:.8rem">–</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="action-cell">
+                    <a href="/plant/{{ plant.id }}/edit" class="btn btn-outline btn-sm">✏️ Bearbeiten</a>
+                    <form method="post" action="/remove/{{ plant.id }}" style="display:inline">
+                        <button type="submit" class="btn btn-ghost btn-sm"
+                                onclick="return confirm('{{ plant.name }} wirklich entfernen?')">🗑️</button>
                     </form>
-                </td>
-                <td>
-                    <a href="/plant/{{ plant.id }}/edit">Bearbeiten</a>
-                    <form method="post" action="/remove/{{ plant.id }}">
-                        <button type="submit">Entfernen</button>
-                    </form>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>Keine Pflanzen vorhanden.</p>
-    {% endif %}
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="icon">🌿</div>
+    <p>Noch keine Pflanzen vorhanden.</p>
+    <p style="margin-top:.5rem;font-size:.875rem">Füge deine erste Pflanze unten hinzu.</p>
+</div>
+{% endif %}
 
-    <h2>Pflanze hinzufügen</h2>
-    <form method="post" action="/add" class="form-add">
-        <label>Name: <input type="text" name="name" required></label>
-        <label>Typ: <input type="text" name="type" required></label>
-        <label>Sorte: <input type="text" name="variety"></label>
-        <label>Lichtbedarf:
+<h2>Pflanze hinzufügen</h2>
+<div class="card">
+<form method="post" action="/add">
+    <div class="form-grid">
+        <div class="form-field">
+            <label>Name *</label>
+            <input type="text" name="name" placeholder="z.B. Erdbeere" required>
+        </div>
+        <div class="form-field">
+            <label>Typ *</label>
+            <input type="text" name="type" placeholder="z.B. Obst" required>
+        </div>
+        <div class="form-field">
+            <label>Sorte</label>
+            <input type="text" name="variety" placeholder="z.B. Elsanta">
+        </div>
+        <div class="form-field">
+            <label>Lichtbedarf *</label>
             <select name="lichtbedarf" required>
                 <option value="">– bitte wählen –</option>
-                <option value="Sonne">Sonne</option>
-                <option value="Halbschatten">Halbschatten</option>
-                <option value="Schatten">Schatten</option>
+                <option value="Sonne">☀️ Sonne</option>
+                <option value="Halbschatten">⛅ Halbschatten</option>
+                <option value="Schatten">🌥️ Schatten</option>
             </select>
-        </label>
-        <label>Lebensdauer:
+        </div>
+        <div class="form-field">
+            <label>Lebensdauer</label>
             <select name="lebensdauer">
                 <option value="">– bitte wählen –</option>
                 <option value="Einjährig">Einjährig</option>
                 <option value="Zweijährig">Zweijährig</option>
                 <option value="Mehrjährig">Mehrjährig</option>
             </select>
-        </label>
-        <label>Pflanzmonat:
+        </div>
+        <div class="form-field">
+            <label>Pflanzmonat</label>
             <select name="pflanzmonat">
                 <option value="">–</option>
                 {% for num, name in german_months.items() %}
                 <option value="{{ num }}">{{ name }}</option>
                 {% endfor %}
             </select>
-        </label>
-        <label>Pflanzjahr: <input type="number" name="pflanzjahr" min="2000" max="2100" placeholder="z.B. 2025"></label>
-        <label>Kommentar: <textarea name="kommentar" rows="2"></textarea></label>
-        <button type="submit">Hinzufügen</button>
-    </form>
+        </div>
+        <div class="form-field">
+            <label>Pflanzjahr</label>
+            <input type="number" name="pflanzjahr" min="2000" max="2100" placeholder="z.B. 2025">
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1">
+            <label>Kommentar</label>
+            <textarea name="kommentar" placeholder="Besonderheiten, Standort, ..."></textarea>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">🌱 Pflanze hinzufügen</button>
+    </div>
+</form>
+</div>
+
 {% endblock %}
