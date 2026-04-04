@@ -10,7 +10,16 @@
     {% if plants %}
     <table>
         <thead>
-            <tr><th>Name</th><th>Typ</th><th>Sorte</th><th>Aktion</th></tr>
+            <tr>
+                <th>Name</th>
+                <th>Typ</th>
+                <th>Sorte</th>
+                <th>Lichtbedarf</th>
+                <th>Kommentar</th>
+                <th>Ereignisse</th>
+                <th>Ereignis hinzufügen</th>
+                <th>Aktion</th>
+            </tr>
         </thead>
         <tbody>
         {% for plant in plants %}
@@ -18,6 +27,44 @@
                 <td>{{ plant.name }}</td>
                 <td>{{ plant.type }}</td>
                 <td>{{ plant.variety if plant.variety else '' }}</td>
+                <td>{{ plant.lichtbedarf if plant.lichtbedarf else '' }}</td>
+                <td>{{ plant.kommentar if plant.kommentar else '' }}</td>
+                <td>
+                    {% if plant.ereignisse %}
+                    <ul class="ereignisse">
+                        {% for e in plant.ereignisse %}
+                        <li>
+                            {{ e.ereignistyp }}: {{ german_months[e.startmonat] }}–{{ german_months[e.endmonat] }}
+                            <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline">
+                                <button type="submit" class="btn-small">✕</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="post" action="/plant/{{ plant.id }}/ereignis/add" class="form-inline">
+                        <select name="ereignistyp">
+                            <option value="Blüte">Blüte</option>
+                            <option value="Ernte">Ernte</option>
+                            <option value="Düngen">Düngen</option>
+                            <option value="Rückschnitt">Rückschnitt</option>
+                        </select>
+                        <select name="startmonat">
+                            {% for num, name in german_months.items() %}
+                            <option value="{{ num }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <span>–</span>
+                        <select name="endmonat">
+                            {% for num, name in german_months.items() %}
+                            <option value="{{ num }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit">+</button>
+                    </form>
+                </td>
                 <td>
                     <form method="post" action="/remove/{{ plant.id }}">
                         <button type="submit">Entfernen</button>
@@ -32,10 +79,19 @@
     {% endif %}
 
     <h2>Pflanze hinzufügen</h2>
-    <form method="post" action="/add">
-        <label>Name: <input type="text" name="name"></label>
-        <label>Typ: <input type="text" name="type"></label>
+    <form method="post" action="/add" class="form-add">
+        <label>Name: <input type="text" name="name" required></label>
+        <label>Typ: <input type="text" name="type" required></label>
         <label>Sorte: <input type="text" name="variety"></label>
+        <label>Lichtbedarf:
+            <select name="lichtbedarf" required>
+                <option value="">– bitte wählen –</option>
+                <option value="Sonne">Sonne</option>
+                <option value="Halbschatten">Halbschatten</option>
+                <option value="Schatten">Schatten</option>
+            </select>
+        </label>
+        <label>Kommentar: <textarea name="kommentar" rows="2"></textarea></label>
         <button type="submit">Hinzufügen</button>
     </form>
 {% endblock %}

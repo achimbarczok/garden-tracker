@@ -49,3 +49,38 @@ button {
 button:hover {
     background: #ddd;
 }
+
+ul.ereignisse {
+    margin: 0;
+    padding-left: 1rem;
+    list-style: none;
+}
+
+ul.ereignisse li {
+    margin-bottom: 0.2rem;
+}
+
+.btn-small {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.75rem;
+    border: 1px solid #aaa;
+    border-radius: 2px;
+    background: #f8f8f8;
+    cursor: pointer;
+}
+
+.form-inline select {
+    margin-right: 0.2rem;
+}
+
+.form-add label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.form-add textarea {
+    width: 100%;
+    padding: 0.3rem;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+}
