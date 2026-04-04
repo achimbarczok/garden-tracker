@@ -10,8 +10,8 @@
 <h2>Meine Pflanzen</h2>
 
 <div class="card" style="margin-bottom:1rem">
-    <form method="get" action="/" class="form-inline-row" style="align-items:flex-end;gap:.75rem">
-        <div class="form-field" style="margin:0">
+    <form method="get" action="/" class="filter-bar">
+        <div class="form-field">
             <label style="font-size:.75rem">Kategorie</label>
             <select name="kategorie" onchange="this.form.submit()">
                 <option value="">Alle Kategorien</option>
@@ -20,7 +20,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="form-field" style="margin:0">
+        <div class="form-field">
             <label style="font-size:.75rem">Ereignistyp</label>
             <select name="ereignis" onchange="this.form.submit()">
                 <option value="">Alle Ereignisse</option>
@@ -29,7 +29,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="form-field" style="margin:0">
+        <div class="form-field">
             <label style="font-size:.75rem">Im Monat</label>
             <select name="monat" onchange="this.form.submit()">
                 <option value="">Alle Monate</option>
@@ -39,7 +39,9 @@
             </select>
         </div>
         {% if filter_kategorie or filter_ereignis or filter_monat %}
-        <a href="/" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a>
+        <div class="form-field" style="align-self:flex-end">
+            <a href="/" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a>
+        </div>
         {% endif %}
     </form>
 </div>

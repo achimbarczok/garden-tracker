@@ -258,6 +258,19 @@ ul.ereignisse li {
   flex-wrap: wrap;
 }
 
+/* ── Filter bar ──────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  align-items: flex-end;
+}
+
+.filter-bar .form-field {
+  flex: 1;
+  min-width: 140px;
+}
+
 /* ── Inline event form ──────────────────────────────────────── */
 .form-inline-row {
   display: flex;
@@ -381,4 +394,33 @@ ul.ereignisse li {
   .form-inline-row { flex-direction: column; }
   .form-inline-row select,
   .form-inline-row input { width: 100%; }
+
+  .form-field { width: 100%; }
+
+  .filter-bar { flex-direction: column; gap: .5rem; }
+  .filter-bar .form-field { min-width: 100%; }
+  .form-field select,
+  .form-field input,
+  .form-field textarea { width: 100%; }
+
+  .form-field label {
+    display: block;
+    margin-bottom: .2rem;
+  }
+
+  /* Compact cards */
+  tbody tr {
+    border: none;
+    border-bottom: 2px solid var(--green-pale);
+    padding: .5rem .75rem;
+  }
+
+  td { padding: .15rem 0; }
+
+  /* Action buttons inline */
+  .action-cell {
+    display: flex;
+    gap: .5rem;
+    margin-top: .25rem;
+  }
 }
