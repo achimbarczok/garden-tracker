@@ -6,8 +6,45 @@
 <div class="alert-error">{{ error }}</div>
 {% endif %}
 
-{% if plants %}
+{% if plants or filter_kategorie or filter_ereignis or filter_monat %}
 <h2>Meine Pflanzen</h2>
+
+<div class="card" style="margin-bottom:1rem">
+    <form method="get" action="/" class="form-inline-row" style="align-items:flex-end;gap:.75rem">
+        <div class="form-field" style="margin:0">
+            <label style="font-size:.75rem">Kategorie</label>
+            <select name="kategorie" onchange="this.form.submit()">
+                <option value="">Alle Kategorien</option>
+                {% for k in valid_kategorien %}
+                <option value="{{ k }}" {% if filter_kategorie == k %}selected{% endif %}>{{ k }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field" style="margin:0">
+            <label style="font-size:.75rem">Ereignistyp</label>
+            <select name="ereignis" onchange="this.form.submit()">
+                <option value="">Alle Ereignisse</option>
+                {% for et in valid_ereignistypen %}
+                <option value="{{ et }}" {% if filter_ereignis == et %}selected{% endif %}>{{ et }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field" style="margin:0">
+            <label style="font-size:.75rem">Im Monat</label>
+            <select name="monat" onchange="this.form.submit()">
+                <option value="">Alle Monate</option>
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}" {% if filter_monat == num|string %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if filter_kategorie or filter_ereignis or filter_monat %}
+        <a href="/" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a>
+        {% endif %}
+    </form>
+</div>
+
+{% if plants %}
 <div class="table-wrap">
 <table>
     <thead>
@@ -74,7 +111,7 @@
             </td>
             <td>
                 <div class="action-cell">
-                    <a href="/plant/{{ plant.id }}/edit" class="btn btn-outline btn-sm">✏️ Bearbeiten</a>
+                    <a href="/plant/{{ plant.id }}/edit" class="btn btn-outline btn-sm">✏️</a>
                     <form method="post" action="/remove/{{ plant.id }}" style="display:inline">
                         <button type="submit" class="btn btn-ghost btn-sm"
                                 onclick="return confirm('{{ plant.name }} wirklich entfernen?')">🗑️</button>
@@ -86,6 +123,15 @@
     </tbody>
 </table>
 </div>
+{% else %}
+<div class="empty-state">
+    <div class="icon">🔍</div>
+    <p>Keine Pflanzen gefunden.</p>
+    {% if filter_kategorie or filter_ereignis or filter_monat %}
+    <p style="margin-top:.5rem"><a href="/">Filter zurücksetzen</a></p>
+    {% endif %}
+</div>
+{% endif %}
 {% else %}
 <div class="empty-state">
     <div class="icon">🌿</div>

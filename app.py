@@ -42,7 +42,42 @@ def _safe_next(next_url: str) -> str:
 @app.route("/")
 def index():
     plants = get_all_plants()
-    return render_template("index.html", plants=plants, german_months=GERMAN_MONTHS, valid_kategorien=VALID_KATEGORIEN)
+
+    # Filter: Kategorie
+    filter_kategorie = request.args.get("kategorie", "")
+    if filter_kategorie:
+        plants = [p for p in plants if p.get("kategorie") == filter_kategorie]
+
+    # Filter: Ereignistyp + Monat
+    filter_ereignis = request.args.get("ereignis", "")
+    filter_monat = request.args.get("monat", "")
+    if filter_monat:
+        try:
+            fm = int(filter_monat)
+        except ValueError:
+            fm = None
+        if fm and 1 <= fm <= 12:
+            def hat_ereignis_im_monat(plant):
+                for e in plant.get("ereignisse", []):
+                    if filter_ereignis and e["ereignistyp"] != filter_ereignis:
+                        continue
+                    if e["startmonat"] <= fm <= e["endmonat"]:
+                        return True
+                return False
+            plants = [p for p in plants if hat_ereignis_im_monat(p)]
+        elif filter_ereignis:
+            plants = [p for p in plants
+                      if any(e["ereignistyp"] == filter_ereignis for e in p.get("ereignisse", []))]
+    elif filter_ereignis:
+        plants = [p for p in plants
+                  if any(e["ereignistyp"] == filter_ereignis for e in p.get("ereignisse", []))]
+
+    return render_template("index.html", plants=plants, german_months=GERMAN_MONTHS,
+                           valid_kategorien=VALID_KATEGORIEN,
+                           valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                           filter_kategorie=filter_kategorie,
+                           filter_ereignis=filter_ereignis,
+                           filter_monat=filter_monat)
 
 
 @app.route("/add", methods=["POST"])
