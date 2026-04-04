@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Meine Pflanzen</h1>
+
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+
+    {% if plants %}
+    <table>
+        <thead>
+            <tr><th>Name</th><th>Typ</th><th>Sorte</th><th>Aktion</th></tr>
+        </thead>
+        <tbody>
+        {% for plant in plants %}
+            <tr>
+                <td>{{ plant.name }}</td>
+                <td>{{ plant.type }}</td>
+                <td>{{ plant.variety if plant.variety else '' }}</td>
+                <td>
+                    <form method="post" action="/remove/{{ plant.id }}">
+                        <button type="submit">Entfernen</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Keine Pflanzen vorhanden.</p>
+    {% endif %}
+
+    <h2>Pflanze hinzufügen</h2>
+    <form method="post" action="/add">
+        <label>Name: <input type="text" name="name"></label>
+        <label>Typ: <input type="text" name="type"></label>
+        <label>Sorte: <input type="text" name="variety"></label>
+        <button type="submit">Hinzufügen</button>
+    </form>
+{% endblock %}

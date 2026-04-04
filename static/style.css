@@ -1,0 +1,51 @@
+body {
+    font-family: sans-serif;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: #222;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+th {
+    background: #f4f4f4;
+}
+
+.error {
+    color: red;
+}
+
+form label {
+    display: inline-block;
+    margin-right: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+form input[type="text"] {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+}
+
+button {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: #eee;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #ddd;
+}
