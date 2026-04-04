@@ -7,6 +7,7 @@ from flask import Flask, abort, redirect, render_template, request, url_for
 
 from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 init_db, remove_ereignis, remove_plant, update_plant,
+                update_ereignis, update_beobachtung,
                 add_beobachtung, remove_beobachtung,
                 get_phaenologie_jahr, get_phaenologie_alle_jahre,
                 upsert_phaenologie, remove_phaenologie, get_aktuelle_phase,
@@ -37,7 +38,7 @@ except Exception as e:
 
 def _safe_next(next_url: str) -> str:
     """Return next_url only if it's a safe internal path, else '/'."""
-    if next_url and (next_url == "/" or next_url.startswith("/plant/")):
+    if next_url and (next_url == "/" or next_url.startswith("/plant/") or next_url.startswith("/phaenologie")):
         return next_url
     return url_for("index")
 
@@ -310,6 +311,30 @@ def remove_ereignis_route(ereignis_id: int):
     return redirect(next_url)
 
 
+@app.route("/ereignis/<int:ereignis_id>/edit", methods=["POST"])
+def edit_ereignis_route(ereignis_id: int):
+    next_url = _safe_next(request.form.get("next", ""))
+    ereignistyp = request.form.get("ereignistyp", "").strip()
+
+    try:
+        startmonat = int(request.form.get("startmonat", ""))
+        endmonat = int(request.form.get("endmonat", ""))
+    except (ValueError, TypeError):
+        return redirect(next_url)
+
+    if ereignistyp not in VALID_EREIGNISTYPEN:
+        return redirect(next_url)
+    if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
+        return redirect(next_url)
+    if startmonat > endmonat:
+        return redirect(next_url)
+
+    update_ereignis(ereignis_id, ereignistyp, startmonat, endmonat,
+                    request.form.get("start_detail", "").strip() or None,
+                    request.form.get("end_detail", "").strip() or None)
+    return redirect(next_url)
+
+
 @app.route("/remove/<int:id>", methods=["POST"])
 def remove(id: int):
     remove_plant(id)
@@ -369,6 +394,34 @@ def remove_beobachtung_route(beobachtung_id: int):
     return redirect(next_url)
 
 
+@app.route("/beobachtung/<int:beobachtung_id>/edit", methods=["POST"])
+def edit_beobachtung_route(beobachtung_id: int):
+    next_url = _safe_next(request.form.get("next", ""))
+    ereignistyp = request.form.get("ereignistyp", "").strip()
+    notiz = request.form.get("notiz", "").strip() or None
+
+    try:
+        jahr = int(request.form.get("jahr", ""))
+        startmonat = int(request.form.get("startmonat", ""))
+        endmonat = int(request.form.get("endmonat", ""))
+    except (ValueError, TypeError):
+        return redirect(next_url)
+
+    if ereignistyp not in VALID_EREIGNISTYPEN:
+        return redirect(next_url)
+    if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
+        return redirect(next_url)
+    if startmonat > endmonat:
+        return redirect(next_url)
+
+    update_beobachtung(beobachtung_id, jahr, ereignistyp, startmonat, endmonat,
+                       request.form.get("phaenologische_phase", "").strip() or None,
+                       notiz,
+                       request.form.get("start_detail", "").strip() or None,
+                       request.form.get("end_detail", "").strip() or None)
+    return redirect(next_url)
+
+
 @app.route("/phaenologie")
 def phaenologie_page():
     heute = date.today()
@@ -400,12 +453,10 @@ def phaenologie_save():
         return redirect(url_for("phaenologie_page", jahr=jahr))
     try:
         startmonat = int(request.form.get("startmonat", ""))
-        endmonat = int(request.form.get("endmonat", ""))
     except (ValueError, TypeError):
         return redirect(url_for("phaenologie_page", jahr=jahr))
     start_detail = request.form.get("start_detail", "").strip() or None
-    end_detail = request.form.get("end_detail", "").strip() or None
-    upsert_phaenologie(jahr, phase, startmonat, start_detail, endmonat, end_detail)
+    upsert_phaenologie(jahr, phase, startmonat, start_detail)
     return redirect(url_for("phaenologie_page", jahr=jahr))
 
 

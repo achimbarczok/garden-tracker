@@ -102,18 +102,55 @@
 <h2>🗓️ Erwartete Ereignisse</h2>
 <div class="card">
     {% if plant.ereignisse %}
-    <ul class="ereignisse" style="margin-bottom:1rem">
+    <div style="margin-bottom:1rem">
         {% for e in plant.ereignisse %}
-        <li>
-            <span class="ereignis-tag">{{ e.ereignistyp }}</span>
-            {% if e.startmonat == e.endmonat and e.start_detail == e.end_detail %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}{% else %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }} – {% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}{% endif %}
-            <form method="post" action="/ereignis/{{ e.id }}/remove" style="display:inline;margin-left:.25rem">
+        <details class="edit-item">
+            <summary class="edit-item-summary">
+                <span class="ereignis-tag">{{ e.ereignistyp }}</span>
+                {% if e.startmonat == e.endmonat and e.start_detail == e.end_detail %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}{% else %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }} – {% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}{% endif %}
+                <span style="margin-left:auto;font-size:.75rem;color:var(--text-muted)">✏️ bearbeiten</span>
+            </summary>
+            <form method="post" action="/ereignis/{{ e.id }}/edit" class="edit-inline-form">
                 <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
-                <button type="submit" class="btn btn-ghost btn-sm">✕</button>
+                <div class="form-inline-row">
+                    <select name="ereignistyp">
+                        {% for et in ["Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"] %}
+                        <option value="{{ et }}" {% if e.ereignistyp == et %}selected{% endif %}>{{ et }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="start_detail">
+                        <option value="">–</option>
+                        {% for d in ["Anfang", "Mitte", "Ende"] %}
+                        <option value="{{ d }}" {% if e.start_detail == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="startmonat">
+                        {% for num, name in german_months.items() %}
+                        <option value="{{ num }}" {% if e.startmonat == num %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                    <span style="align-self:center;color:var(--text-muted)">–</span>
+                    <select name="end_detail">
+                        <option value="">–</option>
+                        {% for d in ["Anfang", "Mitte", "Ende"] %}
+                        <option value="{{ d }}" {% if e.end_detail == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="endmonat">
+                        {% for num, name in german_months.items() %}
+                        <option value="{{ num }}" {% if e.endmonat == num %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">💾</button>
+                </div>
             </form>
-        </li>
+            <form method="post" action="/ereignis/{{ e.id }}/remove" style="margin-top:.25rem">
+                <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
+                <button type="submit" class="btn btn-ghost btn-sm">🗑️ Entfernen</button>
+            </form>
+        </details>
         {% endfor %}
-    </ul>
+    </div>
     {% else %}
     <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Ereignisse eingetragen.</p>
     {% endif %}
@@ -165,20 +202,77 @@
     {% if plant.beobachtungen %}
     <div style="margin-bottom:1rem">
         {% for b in plant.beobachtungen %}
-        <div class="beobachtung-item">
-            <span class="beob-year">{{ b.jahr }}</span>
-            <div class="beob-details">
+        <details class="edit-item">
+            <summary class="edit-item-summary">
+                <span class="beob-year">{{ b.jahr }}</span>
                 <span class="ereignis-tag">{{ b.ereignistyp }}</span>
                 {% if b.startmonat == b.endmonat and b.start_detail == b.end_detail %}{% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }}{% else %}{% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }} – {% if b.end_detail %}{{ b.end_detail }} {% endif %}{{ german_months[b.endmonat] }}{% endif %}
-                {% if b.notiz %}
-                <br><span class="beob-notiz">{{ b.notiz }}</span>
-                {% endif %}
-            </div>
-            <form method="post" action="/beobachtung/{{ b.id }}/remove">
+                {% if b.notiz %}<span class="beob-notiz" style="margin-left:.5rem">{{ b.notiz }}</span>{% endif %}
+                <span style="margin-left:auto;font-size:.75rem;color:var(--text-muted)">✏️ bearbeiten</span>
+            </summary>
+            <form method="post" action="/beobachtung/{{ b.id }}/edit" class="edit-inline-form">
                 <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
-                <button type="submit" class="btn btn-ghost btn-sm">✕</button>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label>Jahr</label>
+                        <input type="number" name="jahr" min="2000" max="2100" value="{{ b.jahr }}" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Ereignistyp</label>
+                        <select name="ereignistyp">
+                            {% for et in ["Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"] %}
+                            <option value="{{ et }}" {% if b.ereignistyp == et %}selected{% endif %}>{{ et }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Von</label>
+                        <select name="start_detail">
+                            <option value="">–</option>
+                            {% for d in ["Anfang", "Mitte", "Ende"] %}
+                            <option value="{{ d }}" {% if b.start_detail == d %}selected{% endif %}>{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Von (Monat)</label>
+                        <select name="startmonat">
+                            {% for num, name in german_months.items() %}
+                            <option value="{{ num }}" {% if b.startmonat == num %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Bis</label>
+                        <select name="end_detail">
+                            <option value="">–</option>
+                            {% for d in ["Anfang", "Mitte", "Ende"] %}
+                            <option value="{{ d }}" {% if b.end_detail == d %}selected{% endif %}>{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Bis (Monat)</label>
+                        <select name="endmonat">
+                            {% for num, name in german_months.items() %}
+                            <option value="{{ num }}" {% if b.endmonat == num %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Notiz</label>
+                        <input type="text" name="notiz" value="{{ b.notiz or '' }}">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-sm">💾 Speichern</button>
+                </div>
             </form>
-        </div>
+            <form method="post" action="/beobachtung/{{ b.id }}/remove" style="margin-top:.25rem">
+                <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
+                <button type="submit" class="btn btn-ghost btn-sm">🗑️ Entfernen</button>
+            </form>
+        </details>
         {% endfor %}
     </div>
     {% else %}

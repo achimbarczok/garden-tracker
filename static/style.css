@@ -367,6 +367,33 @@ ul.ereignisse li {
 .beob-phase   { color: var(--green-mid); font-style: italic; }
 .beob-notiz   { color: var(--text-muted); }
 
+/* ── Inline edit items (details/summary) ────────────────────── */
+.edit-item {
+  border-bottom: 1px solid var(--green-pale);
+  padding: .5rem 0;
+}
+
+.edit-item:last-child { border-bottom: none; }
+
+.edit-item-summary {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  cursor: pointer;
+  font-size: .875rem;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.edit-item-summary::-webkit-details-marker { display: none; }
+
+.edit-inline-form {
+  margin-top: .5rem;
+  padding: .75rem;
+  background: var(--green-bg);
+  border-radius: var(--radius-sm);
+}
+
 /* ── Action cell ────────────────────────────────────────────── */
 .action-cell {
   display: flex;

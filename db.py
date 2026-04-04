@@ -169,6 +169,19 @@ def remove_ereignis(ereignis_id: int) -> None:
         conn.commit()
 
 
+def update_ereignis(ereignis_id: int, ereignistyp: str,
+                    startmonat: int, endmonat: int,
+                    start_detail: str | None = None,
+                    end_detail: str | None = None) -> None:
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE ereignisse SET ereignistyp = ?, startmonat = ?, endmonat = ?, "
+            "start_detail = ?, end_detail = ? WHERE id = ?",
+            (ereignistyp, startmonat, endmonat, start_detail, end_detail, ereignis_id),
+        )
+        conn.commit()
+
+
 def get_plant(plant_id: int) -> dict | None:
     with get_db() as conn:
         row = conn.execute(
@@ -255,6 +268,27 @@ def remove_beobachtung(beobachtung_id: int) -> None:
         conn.commit()
 
 
+def update_beobachtung(beobachtung_id: int, jahr: int, ereignistyp: str,
+                       startmonat: int, endmonat: int,
+                       phaenologische_phase: str | None = None,
+                       notiz: str | None = None,
+                       start_detail: str | None = None,
+                       end_detail: str | None = None) -> None:
+    if phaenologische_phase == "":
+        phaenologische_phase = None
+    if notiz == "":
+        notiz = None
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE beobachtungen SET jahr = ?, ereignistyp = ?, startmonat = ?, "
+            "endmonat = ?, phaenologische_phase = ?, notiz = ?, "
+            "start_detail = ?, end_detail = ? WHERE id = ?",
+            (jahr, ereignistyp, startmonat, endmonat,
+             phaenologische_phase, notiz, start_detail, end_detail, beobachtung_id),
+        )
+        conn.commit()
+
+
 PHAENOLOGISCHE_PHASEN = [
     "Vorfrühling", "Erstfrühling", "Vollfrühling",
     "Frühsommer", "Hochsommer", "Spätsommer",
@@ -284,9 +318,8 @@ def get_phaenologie_alle_jahre() -> list[int]:
 
 
 def upsert_phaenologie(jahr: int, phase: str, startmonat: int,
-                       start_detail: str | None, endmonat: int,
-                       end_detail: str | None) -> None:
-    """Insert or update a phenology entry."""
+                       start_detail: str | None) -> None:
+    """Insert or update a phenology entry (only start; end is implicit from next phase)."""
     with get_db() as conn:
         existing = conn.execute(
             "SELECT id FROM phaenologie WHERE jahr = ? AND phase = ?",
@@ -294,15 +327,14 @@ def upsert_phaenologie(jahr: int, phase: str, startmonat: int,
         ).fetchone()
         if existing:
             conn.execute(
-                "UPDATE phaenologie SET startmonat = ?, start_detail = ?, "
-                "endmonat = ?, end_detail = ? WHERE id = ?",
-                (startmonat, start_detail, endmonat, end_detail, existing[0]),
+                "UPDATE phaenologie SET startmonat = ?, start_detail = ? WHERE id = ?",
+                (startmonat, start_detail, existing[0]),
             )
         else:
             conn.execute(
                 "INSERT INTO phaenologie (jahr, phase, startmonat, start_detail, "
                 "endmonat, end_detail) VALUES (?, ?, ?, ?, ?, ?)",
-                (jahr, phase, startmonat, start_detail, endmonat, end_detail),
+                (jahr, phase, startmonat, start_detail, startmonat, start_detail),
             )
         conn.commit()
 
@@ -314,20 +346,33 @@ def remove_phaenologie(phaenologie_id: int) -> None:
 
 
 def get_aktuelle_phase(heute_monat: int, heute_tag: int, jahr: int) -> str | None:
-    """Determine the current phenological phase based on today's date."""
+    """Determine the current phenological phase based on today's date.
+
+    Each phase lasts from its own start until the start of the next phase.
+    The last recorded phase extends to the end of the year.
+    """
     phasen = get_phaenologie_jahr(jahr)
     if not phasen:
         return None
-    # Convert detail to approximate day: Anfang=5, Mitte=15, Ende=25, None=1
+
     def to_day(detail):
         if detail == "Anfang": return 5
         if detail == "Mitte": return 15
         if detail == "Ende": return 25
         return 1
-    for p in phasen:
+
+    heute_val = heute_monat * 100 + heute_tag
+
+    # Sort by start value
+    sorted_phasen = sorted(phasen, key=lambda p: p["startmonat"] * 100 + to_day(p.get("start_detail")))
+
+    for i, p in enumerate(sorted_phasen):
         start_val = p["startmonat"] * 100 + to_day(p.get("start_detail"))
-        end_val = p["endmonat"] * 100 + to_day(p.get("end_detail"))
-        heute_val = heute_monat * 100 + heute_tag
+        if i + 1 < len(sorted_phasen):
+            next_start = sorted_phasen[i + 1]["startmonat"] * 100 + to_day(sorted_phasen[i + 1].get("start_detail"))
+            end_val = next_start - 1
+        else:
+            end_val = 1231  # end of year
         if start_val <= heute_val <= end_val:
             return p["phase"]
     return None

@@ -33,8 +33,7 @@
         <thead>
             <tr>
                 <th>Phase</th>
-                <th>Von</th>
-                <th>Bis</th>
+                <th>Beginn</th>
                 <th></th>
             </tr>
         </thead>
@@ -43,7 +42,6 @@
             <tr{% if aktuelle_phase == p.phase and selected_year == now_year %} style="background:var(--green-pale)"{% endif %}>
                 <td><strong>{{ p.phase }}</strong></td>
                 <td>{% if p.start_detail %}{{ p.start_detail }} {% endif %}{{ german_months[p.startmonat] }}</td>
-                <td>{% if p.end_detail %}{{ p.end_detail }} {% endif %}{{ german_months[p.endmonat] }}</td>
                 <td>
                     <form method="post" action="/phaenologie/{{ p.id }}/remove" style="display:inline">
                         <input type="hidden" name="jahr" value="{{ selected_year }}">
@@ -71,7 +69,7 @@
                 </select>
             </div>
             <div class="form-field">
-                <label>Von</label>
+                <label>Beginn</label>
                 <select name="start_detail">
                     <option value="">–</option>
                     <option value="Anfang">Anfang</option>
@@ -80,25 +78,8 @@
                 </select>
             </div>
             <div class="form-field">
-                <label>Von (Monat)</label>
+                <label>Monat</label>
                 <select name="startmonat" required>
-                    {% for num, name in german_months.items() %}
-                    <option value="{{ num }}">{{ name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-field">
-                <label>Bis</label>
-                <select name="end_detail">
-                    <option value="">–</option>
-                    <option value="Anfang">Anfang</option>
-                    <option value="Mitte">Mitte</option>
-                    <option value="Ende">Ende</option>
-                </select>
-            </div>
-            <div class="form-field">
-                <label>Bis (Monat)</label>
-                <select name="endmonat" required>
                     {% for num, name in german_months.items() %}
                     <option value="{{ num }}">{{ name }}</option>
                     {% endfor %}
