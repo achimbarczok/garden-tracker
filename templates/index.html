@@ -64,7 +64,7 @@
     <tbody>
     {% for plant in plants %}
         <tr>
-            <td><strong>{{ plant.name }}</strong>{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
+            <td>{% if plant.farbe %}<span class="color-dot" style="background:{{ plant.farbe }}"></span>{% endif %}<strong>{{ plant.name }}</strong>{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
             <td>{{ plant.kategorie or '' }}</td>
             <td class="hide-mobile">
                 {% if plant.type %}{{ plant.type }}{% endif %}
@@ -201,6 +201,10 @@
         <div class="form-field">
             <label>Anzahl</label>
             <input type="number" name="anzahl" min="1" value="1" placeholder="1">
+        </div>
+        <div class="form-field">
+            <label>Farbe</label>
+            <input type="color" name="farbe" value="#40916c">
         </div>
         <div class="form-field" style="grid-column: 1 / -1">
             <label>Kommentar</label>

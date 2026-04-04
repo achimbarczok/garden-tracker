@@ -136,7 +136,8 @@ def add():
         )
 
     add_plant(name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
-              int(request.form.get("anzahl", 1) or 1), kategorie)
+              int(request.form.get("anzahl", 1) or 1), kategorie,
+              farbe=request.form.get("farbe", "").strip() or None)
     return redirect(url_for("index"))
 
 
@@ -220,7 +221,8 @@ def edit_save(plant_id: int):
 
     update_plant(plant_id, name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
                  int(request.form.get("anzahl", 1) or 1), kategorie,
-                 request.form.get("beschreibung", "").strip() or None)
+                 request.form.get("beschreibung", "").strip() or None,
+                 request.form.get("farbe", "").strip() or None)
     return redirect(url_for("index"))
 
 

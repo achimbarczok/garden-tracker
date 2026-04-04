@@ -131,6 +131,17 @@ td {
   overflow-wrap: break-word;
 }
 
+/* ── Color dot ──────────────────────────────────────────────── */
+.color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: .4rem;
+  vertical-align: middle;
+  border: 1px solid rgba(0,0,0,.15);
+}
+
 /* ── Badges ─────────────────────────────────────────────────── */
 .badge {
   display: inline-block;

@@ -78,6 +78,10 @@
             <input type="number" name="anzahl" min="1"
                    value="{{ plant.anzahl or 1 }}">
         </div>
+        <div class="form-field">
+            <label>Farbe</label>
+            <input type="color" name="farbe" value="{{ plant.farbe or '#40916c' }}">
+        </div>
         <div class="form-field" style="grid-column: 1 / -1">
             <label>Kommentar</label>
             <textarea name="kommentar">{{ plant.kommentar or '' }}</textarea>
