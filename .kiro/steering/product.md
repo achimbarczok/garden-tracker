@@ -7,6 +7,8 @@ A personal garden management web app (German-language) for tracking plants, seas
 - Expected events per plant (Blüte, Ernte, Düngen, Rückschnitt, Vorkultur, Auspflanzen, Direktsaat) with month ranges and optional Anfang/Mitte/Ende detail
 - Observation log: record actual event timings per year for comparison with expectations
 - Phenological calendar: 10 phenological seasons per year (Vorfrühling through Winter), current phase shown on homepage
+- Plant duplication (Satz copy with all master data and events)
+- Deactivate plants instead of deleting — data preserved, hidden from default list, reactivatable via filter
 - Filtering by category, event type, and month
 - Seed script for pre-populating the database with researched plant data
 

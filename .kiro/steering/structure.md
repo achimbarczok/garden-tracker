@@ -3,6 +3,7 @@
 ```
 ├── app.py              # Flask application — all routes, validation, constants
 ├── db.py               # Database layer — init, migrations, all CRUD functions
+├── conftest.py         # Root pytest config — ensures project root on sys.path
 ├── seed_plants.py      # One-time seed script for sample plant data
 ├── requirements.txt    # Python dependencies
 ├── Dockerfile          # Container definition
@@ -15,7 +16,8 @@
 │   └── style.css       # All styles (CSS custom properties, responsive)
 └── tests/
     ├── test_routes.py  # Route/endpoint tests using Flask test client
-    └── test_startup.py # Startup error handling tests
+    ├── test_startup.py # Startup error handling tests
+    └── test_pflanze_inaktiv_properties.py # Property-based tests (Hypothesis)
 ```
 
 ## Architecture Patterns

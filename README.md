@@ -9,6 +9,9 @@ Eine Web-App zur Verwaltung von Gartenpflanzen mit Ereigniskalender, Beobachtung
 - Beobachtungslogbuch — tatsächliche Zeiträume pro Jahr festhalten
 - Phänologischer Kalender — 10 Jahreszeiten pro Jahr erfassen, aktuelle Phase auf der Startseite
 - Pflanzenbeschreibung als Referenzinfo
+- Pflanze duplizieren (Satz-Kopie mit allen Stammdaten und Ereignissen)
+- Pflanzen inaktiv setzen statt löschen — Daten bleiben erhalten, Pflanze wird aus der Liste ausgeblendet
+- Inaktive Pflanzen über Filter einblenden und jederzeit wieder aktivieren
 - Filter nach Kategorie, Ereignistyp und Monat
 - Monatsangaben mit optionalem Anfang/Mitte/Ende
 - Responsives Design für Desktop und Smartphone
