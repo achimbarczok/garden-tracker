@@ -7,7 +7,10 @@ from flask import Flask, abort, redirect, render_template, request, url_for
 
 from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 init_db, remove_ereignis, remove_plant, update_plant,
-                add_beobachtung, remove_beobachtung)
+                add_beobachtung, remove_beobachtung,
+                get_phaenologie_jahr, get_phaenologie_alle_jahre,
+                upsert_phaenologie, remove_phaenologie, get_aktuelle_phase,
+                PHAENOLOGISCHE_PHASEN)
 
 PORT = int(os.environ.get("PORT", 5000))
 
@@ -72,12 +75,16 @@ def index():
         plants = [p for p in plants
                   if any(e["ereignistyp"] == filter_ereignis for e in p.get("ereignisse", []))]
 
+    heute = date.today()
+    aktuelle_phase = get_aktuelle_phase(heute.month, heute.day, heute.year)
+
     return render_template("index.html", plants=plants, german_months=GERMAN_MONTHS,
                            valid_kategorien=VALID_KATEGORIEN,
                            valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
                            filter_kategorie=filter_kategorie,
                            filter_ereignis=filter_ereignis,
-                           filter_monat=filter_monat)
+                           filter_monat=filter_monat,
+                           aktuelle_phase=aktuelle_phase)
 
 
 @app.route("/add", methods=["POST"])
@@ -360,3 +367,50 @@ def remove_beobachtung_route(beobachtung_id: int):
     next_url = _safe_next(request.form.get("next", ""))
     remove_beobachtung(beobachtung_id)
     return redirect(next_url)
+
+
+@app.route("/phaenologie")
+def phaenologie_page():
+    heute = date.today()
+    selected_year = request.args.get("jahr", str(heute.year))
+    try:
+        selected_year = int(selected_year)
+    except ValueError:
+        selected_year = heute.year
+    phasen = get_phaenologie_jahr(selected_year)
+    alle_jahre = get_phaenologie_alle_jahre()
+    if selected_year not in alle_jahre:
+        alle_jahre = sorted(set(alle_jahre + [selected_year]), reverse=True)
+    aktuelle_phase = get_aktuelle_phase(heute.month, heute.day, heute.year)
+    return render_template("phaenologie.html",
+                           phasen=phasen,
+                           alle_phasen=PHAENOLOGISCHE_PHASEN,
+                           alle_jahre=alle_jahre,
+                           selected_year=selected_year,
+                           german_months=GERMAN_MONTHS,
+                           aktuelle_phase=aktuelle_phase,
+                           now_year=heute.year)
+
+
+@app.route("/phaenologie/save", methods=["POST"])
+def phaenologie_save():
+    jahr = int(request.form.get("jahr", date.today().year))
+    phase = request.form.get("phase", "").strip()
+    if phase not in PHAENOLOGISCHE_PHASEN:
+        return redirect(url_for("phaenologie_page", jahr=jahr))
+    try:
+        startmonat = int(request.form.get("startmonat", ""))
+        endmonat = int(request.form.get("endmonat", ""))
+    except (ValueError, TypeError):
+        return redirect(url_for("phaenologie_page", jahr=jahr))
+    start_detail = request.form.get("start_detail", "").strip() or None
+    end_detail = request.form.get("end_detail", "").strip() or None
+    upsert_phaenologie(jahr, phase, startmonat, start_detail, endmonat, end_detail)
+    return redirect(url_for("phaenologie_page", jahr=jahr))
+
+
+@app.route("/phaenologie/<int:phaenologie_id>/remove", methods=["POST"])
+def phaenologie_remove(phaenologie_id: int):
+    jahr = request.form.get("jahr", str(date.today().year))
+    remove_phaenologie(phaenologie_id)
+    return redirect(url_for("phaenologie_page", jahr=jahr))

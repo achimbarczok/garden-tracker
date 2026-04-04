@@ -64,6 +64,19 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE beobachtungen ADD COLUMN start_detail TEXT")
     if "end_detail" not in bcols:
         conn.execute("ALTER TABLE beobachtungen ADD COLUMN end_detail TEXT")
+    # Phänologie-Tabelle
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS phaenologie (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            jahr        INTEGER NOT NULL,
+            phase       TEXT    NOT NULL,
+            startmonat  INTEGER NOT NULL,
+            start_detail TEXT,
+            endmonat    INTEGER NOT NULL,
+            end_detail  TEXT,
+            UNIQUE(jahr, phase)
+        )
+    """)
     conn.commit()
 
 
@@ -240,3 +253,81 @@ def remove_beobachtung(beobachtung_id: int) -> None:
     with get_db() as conn:
         conn.execute("DELETE FROM beobachtungen WHERE id = ?", (beobachtung_id,))
         conn.commit()
+
+
+PHAENOLOGISCHE_PHASEN = [
+    "Vorfrühling", "Erstfrühling", "Vollfrühling",
+    "Frühsommer", "Hochsommer", "Spätsommer",
+    "Frühherbst", "Vollherbst", "Spätherbst",
+    "Winter",
+]
+
+
+def get_phaenologie_jahr(jahr: int) -> list[dict]:
+    """Get all phenology entries for a given year, ordered by phase."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, jahr, phase, startmonat, start_detail, endmonat, end_detail "
+            "FROM phaenologie WHERE jahr = ? ORDER BY id",
+            (jahr,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_phaenologie_alle_jahre() -> list[int]:
+    """Get all years that have phenology data."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT jahr FROM phaenologie ORDER BY jahr DESC"
+        ).fetchall()
+    return [r[0] for r in rows]
+
+
+def upsert_phaenologie(jahr: int, phase: str, startmonat: int,
+                       start_detail: str | None, endmonat: int,
+                       end_detail: str | None) -> None:
+    """Insert or update a phenology entry."""
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id FROM phaenologie WHERE jahr = ? AND phase = ?",
+            (jahr, phase),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE phaenologie SET startmonat = ?, start_detail = ?, "
+                "endmonat = ?, end_detail = ? WHERE id = ?",
+                (startmonat, start_detail, endmonat, end_detail, existing[0]),
+            )
+        else:
+            conn.execute(
+                "INSERT INTO phaenologie (jahr, phase, startmonat, start_detail, "
+                "endmonat, end_detail) VALUES (?, ?, ?, ?, ?, ?)",
+                (jahr, phase, startmonat, start_detail, endmonat, end_detail),
+            )
+        conn.commit()
+
+
+def remove_phaenologie(phaenologie_id: int) -> None:
+    with get_db() as conn:
+        conn.execute("DELETE FROM phaenologie WHERE id = ?", (phaenologie_id,))
+        conn.commit()
+
+
+def get_aktuelle_phase(heute_monat: int, heute_tag: int, jahr: int) -> str | None:
+    """Determine the current phenological phase based on today's date."""
+    phasen = get_phaenologie_jahr(jahr)
+    if not phasen:
+        return None
+    # Convert detail to approximate day: Anfang=5, Mitte=15, Ende=25, None=1
+    def to_day(detail):
+        if detail == "Anfang": return 5
+        if detail == "Mitte": return 15
+        if detail == "Ende": return 25
+        return 1
+    for p in phasen:
+        start_val = p["startmonat"] * 100 + to_day(p.get("start_detail"))
+        end_val = p["endmonat"] * 100 + to_day(p.get("end_detail"))
+        heute_val = heute_monat * 100 + heute_tag
+        if start_val <= heute_val <= end_val:
+            return p["phase"]
+    return None

@@ -6,6 +6,17 @@
 <div class="alert-error">{{ error }}</div>
 {% endif %}
 
+{% if aktuelle_phase %}
+<div class="card" style="background:var(--green-pale);border-color:var(--green-light);margin-bottom:1.5rem">
+    <span style="font-size:1.1rem">🍃 Aktuelle phänologische Jahreszeit: <strong>{{ aktuelle_phase }}</strong></span>
+    <a href="/phaenologie" style="margin-left:.75rem;font-size:.85rem">Kalender bearbeiten →</a>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:1.5rem;color:var(--text-muted)">
+    <span>🍃 Phänologischer Kalender: <a href="/phaenologie">noch nicht erfasst</a></span>
+</div>
+{% endif %}
+
 {% if plants or filter_kategorie or filter_ereignis or filter_monat %}
 <h2>Meine Pflanzen</h2>
 

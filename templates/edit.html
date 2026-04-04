@@ -170,9 +170,6 @@
             <div class="beob-details">
                 <span class="ereignis-tag">{{ b.ereignistyp }}</span>
                 {% if b.startmonat == b.endmonat and b.start_detail == b.end_detail %}{% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }}{% else %}{% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }} – {% if b.end_detail %}{{ b.end_detail }} {% endif %}{{ german_months[b.endmonat] }}{% endif %}
-                {% if b.phaenologische_phase %}
-                <span class="beob-phase"> · {{ b.phaenologische_phase }}</span>
-                {% endif %}
                 {% if b.notiz %}
                 <br><span class="beob-notiz">{{ b.notiz }}</span>
                 {% endif %}
@@ -242,10 +239,6 @@
                     <option value="{{ num }}">{{ name }}</option>
                     {% endfor %}
                 </select>
-            </div>
-            <div class="form-field">
-                <label>Phänologische Phase</label>
-                <input type="text" name="phaenologische_phase" placeholder="z.B. Vollfrühling">
             </div>
             <div class="form-field">
                 <label>Notiz</label>
