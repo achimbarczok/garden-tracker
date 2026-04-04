@@ -113,7 +113,7 @@
             <form method="post" action="/ereignis/{{ e.id }}/edit" class="edit-inline-form">
                 <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
                 <div class="form-inline-row">
-                    <select name="ereignistyp">
+                    <select name="ereignistyp" onchange="toggleBis(this)">
                         {% for et in ["Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"] %}
                         <option value="{{ et }}" {% if e.ereignistyp == et %}selected{% endif %}>{{ et }}</option>
                         {% endfor %}
@@ -129,18 +129,20 @@
                         <option value="{{ num }}" {% if e.startmonat == num %}selected{% endif %}>{{ name }}</option>
                         {% endfor %}
                     </select>
-                    <span style="align-self:center;color:var(--text-muted)">–</span>
-                    <select name="end_detail">
-                        <option value="">–</option>
-                        {% for d in ["Anfang", "Mitte", "Ende"] %}
-                        <option value="{{ d }}" {% if e.end_detail == d %}selected{% endif %}>{{ d }}</option>
-                        {% endfor %}
-                    </select>
-                    <select name="endmonat">
-                        {% for num, name in german_months.items() %}
-                        <option value="{{ num }}" {% if e.endmonat == num %}selected{% endif %}>{{ name }}</option>
-                        {% endfor %}
-                    </select>
+                    <span class="bis-fields" {% if e.ereignistyp not in zeitraum_ereignistypen %}style="display:none"{% endif %}>
+                        <span style="align-self:center;color:var(--text-muted)">–</span>
+                        <select name="end_detail">
+                            <option value="">–</option>
+                            {% for d in ["Anfang", "Mitte", "Ende"] %}
+                            <option value="{{ d }}" {% if e.end_detail == d %}selected{% endif %}>{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="endmonat">
+                            {% for num, name in german_months.items() %}
+                            <option value="{{ num }}" {% if e.endmonat == num %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </span>
                     <button type="submit" class="btn btn-primary btn-sm">💾</button>
                 </div>
             </form>
@@ -156,10 +158,10 @@
     {% endif %}
 
     <h3>Ereignis hinzufügen</h3>
-    <form method="post" action="/plant/{{ plant.id }}/ereignis/add">
+    <form method="post" action="/plant/{{ plant.id }}/ereignis/add" id="add-ereignis-form">
         <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
         <div class="form-inline-row">
-            <select name="ereignistyp">
+            <select name="ereignistyp" onchange="toggleBis(this)">
                 <option value="Blüte">🌸 Blüte</option>
                 <option value="Ernte">🍓 Ernte</option>
                 <option value="Düngen">🌿 Düngen</option>
@@ -179,18 +181,20 @@
                 <option value="{{ num }}">{{ name }}</option>
                 {% endfor %}
             </select>
-            <span style="align-self:center;color:var(--text-muted)">–</span>
-            <select name="end_detail">
-                <option value="">–</option>
-                <option value="Anfang">Anfang</option>
-                <option value="Mitte">Mitte</option>
-                <option value="Ende">Ende</option>
-            </select>
-            <select name="endmonat">
-                {% for num, name in german_months.items() %}
-                <option value="{{ num }}">{{ name }}</option>
-                {% endfor %}
-            </select>
+            <span class="bis-fields">
+                <span style="align-self:center;color:var(--text-muted)">–</span>
+                <select name="end_detail">
+                    <option value="">–</option>
+                    <option value="Anfang">Anfang</option>
+                    <option value="Mitte">Mitte</option>
+                    <option value="Ende">Ende</option>
+                </select>
+                <select name="endmonat">
+                    {% for num, name in german_months.items() %}
+                    <option value="{{ num }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </span>
             <button type="submit" class="btn btn-primary btn-sm">+ Hinzufügen</button>
         </div>
     </form>
@@ -219,14 +223,14 @@
                     </div>
                     <div class="form-field">
                         <label>Ereignistyp</label>
-                        <select name="ereignistyp">
+                        <select name="ereignistyp" onchange="toggleBis(this)">
                             {% for et in ["Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"] %}
                             <option value="{{ et }}" {% if b.ereignistyp == et %}selected{% endif %}>{{ et }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-field">
-                        <label>Von</label>
+                        <label>Wann</label>
                         <select name="start_detail">
                             <option value="">–</option>
                             {% for d in ["Anfang", "Mitte", "Ende"] %}
@@ -235,14 +239,14 @@
                         </select>
                     </div>
                     <div class="form-field">
-                        <label>Von (Monat)</label>
+                        <label>Monat</label>
                         <select name="startmonat">
                             {% for num, name in german_months.items() %}
                             <option value="{{ num }}" {% if b.startmonat == num %}selected{% endif %}>{{ name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="form-field">
+                    <div class="form-field bis-fields" {% if b.ereignistyp not in zeitraum_ereignistypen %}style="display:none"{% endif %}>
                         <label>Bis</label>
                         <select name="end_detail">
                             <option value="">–</option>
@@ -251,7 +255,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="form-field">
+                    <div class="form-field bis-fields" {% if b.ereignistyp not in zeitraum_ereignistypen %}style="display:none"{% endif %}>
                         <label>Bis (Monat)</label>
                         <select name="endmonat">
                             {% for num, name in german_months.items() %}
@@ -290,7 +294,7 @@
             </div>
             <div class="form-field">
                 <label>Ereignistyp</label>
-                <select name="ereignistyp">
+                <select name="ereignistyp" onchange="toggleBis(this)">
                     <option value="Blüte">🌸 Blüte</option>
                     <option value="Ernte">🍓 Ernte</option>
                     <option value="Düngen">🌿 Düngen</option>
@@ -301,7 +305,7 @@
                 </select>
             </div>
             <div class="form-field">
-                <label>Von</label>
+                <label>Wann</label>
                 <select name="start_detail">
                     <option value="">–</option>
                     <option value="Anfang">Anfang</option>
@@ -310,14 +314,14 @@
                 </select>
             </div>
             <div class="form-field">
-                <label>Von (Monat)</label>
+                <label>Monat</label>
                 <select name="startmonat">
                     {% for num, name in german_months.items() %}
                     <option value="{{ num }}">{{ name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-field">
+            <div class="form-field bis-fields">
                 <label>Bis</label>
                 <select name="end_detail">
                     <option value="">–</option>
@@ -326,7 +330,7 @@
                     <option value="Ende">Ende</option>
                 </select>
             </div>
-            <div class="form-field">
+            <div class="form-field bis-fields">
                 <label>Bis (Monat)</label>
                 <select name="endmonat">
                     {% for num, name in german_months.items() %}
@@ -356,5 +360,16 @@
                 onclick="return confirm('{{ plant.name }} wirklich löschen?')">🗑️ Pflanze löschen</button>
     </form>
 </div>
+
+<script>
+var ZEITRAUM_TYPEN = {{ zeitraum_ereignistypen | tojson }};
+function toggleBis(sel) {
+    var form = sel.closest('form');
+    var show = ZEITRAUM_TYPEN.includes(sel.value);
+    form.querySelectorAll('.bis-fields').forEach(function(el) {
+        el.style.display = show ? '' : 'none';
+    });
+}
+</script>
 
 {% endblock %}

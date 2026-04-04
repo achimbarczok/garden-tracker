@@ -394,6 +394,13 @@ ul.ereignisse li {
   border-radius: var(--radius-sm);
 }
 
+/* ── Bis-fields (inline Zeitraum toggle) ────────────────────── */
+.form-inline-row .bis-fields {
+  display: inline-flex;
+  gap: .5rem;
+  align-items: center;
+}
+
 /* ── Action cell ────────────────────────────────────────────── */
 .action-cell {
   display: flex;

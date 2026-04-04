@@ -297,7 +297,7 @@ PHAENOLOGISCHE_PHASEN = [
 ]
 
 PHASEN_ICONS = {
-    "Vorfrühling": "❄️🌱",
+    "Vorfrühling": "🌱",
     "Erstfrühling": "🌼",
     "Vollfrühling": "🌸",
     "Frühsommer": "☀️",

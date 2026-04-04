@@ -23,6 +23,7 @@ GERMAN_MONTHS = {
 
 VALID_LICHTBEDARF = {"Sonne", "Halbschatten", "Schatten"}
 VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"}
+ZEITRAUM_EREIGNISTYPEN = {"Blüte", "Ernte"}
 VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
 VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung"]
 VALID_DETAIL = {"", "Anfang", "Mitte", "Ende"}
@@ -160,6 +161,7 @@ def edit_route(plant_id: int):
         plant=plant,
         german_months=GERMAN_MONTHS,
         valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+        zeitraum_ereignistypen=sorted(ZEITRAUM_EREIGNISTYPEN),
         valid_lebensdauer=sorted(VALID_LEBENSDAUER),
         valid_kategorien=VALID_KATEGORIEN,
         now_year=date.today().year,
@@ -285,23 +287,28 @@ def add_ereignis_route(plant_id: int):
             400,
         )
 
-    if startmonat > endmonat:
-        plant = get_plant(plant_id)
-        return (
-            render_template(
-                "edit.html" if "/plant/" in next_url else "index.html",
-                plant=plant,
-                plants=get_all_plants() if "/plant/" not in next_url else None,
-                german_months=GERMAN_MONTHS,
-                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                error="Startmonat darf nicht größer als Endmonat sein.",
-            ),
-            400,
-        )
+    start_detail = request.form.get("start_detail", "").strip() or None
+    if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
+        end_detail = request.form.get("end_detail", "").strip() or None
+        if startmonat > endmonat:
+            plant = get_plant(plant_id)
+            return (
+                render_template(
+                    "edit.html" if "/plant/" in next_url else "index.html",
+                    plant=plant,
+                    plants=get_all_plants() if "/plant/" not in next_url else None,
+                    german_months=GERMAN_MONTHS,
+                    valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                    error="Startmonat darf nicht größer als Endmonat sein.",
+                ),
+                400,
+            )
+    else:
+        endmonat = startmonat
+        end_detail = start_detail
 
     add_ereignis(plant_id, ereignistyp, startmonat, endmonat,
-                 request.form.get("start_detail", "").strip() or None,
-                 request.form.get("end_detail", "").strip() or None)
+                 start_detail, end_detail)
     return redirect(next_url)
 
 
@@ -327,12 +334,18 @@ def edit_ereignis_route(ereignis_id: int):
         return redirect(next_url)
     if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
         return redirect(next_url)
-    if startmonat > endmonat:
-        return redirect(next_url)
+
+    start_detail = request.form.get("start_detail", "").strip() or None
+    if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
+        if startmonat > endmonat:
+            return redirect(next_url)
+        end_detail = request.form.get("end_detail", "").strip() or None
+    else:
+        endmonat = startmonat
+        end_detail = start_detail
 
     update_ereignis(ereignis_id, ereignistyp, startmonat, endmonat,
-                    request.form.get("start_detail", "").strip() or None,
-                    request.form.get("end_detail", "").strip() or None)
+                    start_detail, end_detail)
     return redirect(next_url)
 
 
@@ -374,17 +387,22 @@ def add_beobachtung_route(plant_id: int):
                                valid_lebensdauer=sorted(VALID_LEBENSDAUER),
                                error="Monat muss zwischen 1 und 12 liegen."), 400
 
-    if startmonat > endmonat:
-        plant = get_plant(plant_id)
-        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
-                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                               error="Startmonat darf nicht größer als Endmonat sein."), 400
+    start_detail = request.form.get("start_detail", "").strip() or None
+    if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
+        end_detail = request.form.get("end_detail", "").strip() or None
+        if startmonat > endmonat:
+            plant = get_plant(plant_id)
+            return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
+                                   valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                                   valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+                                   error="Startmonat darf nicht größer als Endmonat sein."), 400
+    else:
+        endmonat = startmonat
+        end_detail = start_detail
 
     add_beobachtung(plant_id, jahr, ereignistyp, startmonat, endmonat,
                     phaenologische_phase, notiz,
-                    request.form.get("start_detail", "").strip() or None,
-                    request.form.get("end_detail", "").strip() or None)
+                    start_detail, end_detail)
     return redirect(next_url)
 
 
@@ -412,14 +430,20 @@ def edit_beobachtung_route(beobachtung_id: int):
         return redirect(next_url)
     if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
         return redirect(next_url)
-    if startmonat > endmonat:
-        return redirect(next_url)
+
+    start_detail = request.form.get("start_detail", "").strip() or None
+    if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
+        if startmonat > endmonat:
+            return redirect(next_url)
+        end_detail = request.form.get("end_detail", "").strip() or None
+    else:
+        endmonat = startmonat
+        end_detail = start_detail
 
     update_beobachtung(beobachtung_id, jahr, ereignistyp, startmonat, endmonat,
                        request.form.get("phaenologische_phase", "").strip() or None,
                        notiz,
-                       request.form.get("start_detail", "").strip() or None,
-                       request.form.get("end_detail", "").strip() or None)
+                       start_detail, end_detail)
     return redirect(next_url)
 
 
