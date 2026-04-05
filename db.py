@@ -4,6 +4,18 @@ import sqlite3
 
 DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
 
+_DETAIL_OFFSETS = {"Anfang": 5, "Mitte": 15, "Ende": 25}
+
+
+def berechne_sortierwert(monat: int, detail: str | None) -> int:
+    """Calculate a numeric sort value from month and optional detail.
+
+    Pure function, no DB access.
+    Returns monat * 100 + offset where offset depends on detail:
+      "Anfang" → 5, "Mitte" → 15, "Ende" → 25, None/empty → 15
+    """
+    return monat * 100 + _DETAIL_OFFSETS.get(detail or "", 15)
+
 
 def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -197,6 +209,42 @@ def get_all_plants(include_inactive: bool = False) -> list[dict]:
             plant["ereignisse"] = [dict(e) for e in ereignisse]
             plants.append(plant)
     return plants
+
+
+def get_all_beobachtungen() -> list[dict]:
+    """Get all observations joined with active plants, sorted by sortierwert and name."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT b.id AS beobachtung_id, b.plant_id, p.name AS plant_name, "
+            "p.kategorie, b.jahr, b.ereignistyp, "
+            "b.startmonat, b.endmonat, b.start_detail, b.end_detail, b.notiz, "
+            "(b.startmonat * 100 + CASE b.start_detail "
+            "WHEN 'Anfang' THEN 5 WHEN 'Ende' THEN 25 ELSE 15 "
+            "END) AS sortierwert "
+            "FROM beobachtungen b "
+            "JOIN plants p ON b.plant_id = p.id "
+            "WHERE p.aktiv = 1 "
+            "ORDER BY sortierwert ASC, p.name ASC"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_all_ereignisse() -> list[dict]:
+    """Get all events joined with active plants, sorted by sortierwert and name."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT e.id AS ereignis_id, e.plant_id, p.name AS plant_name, "
+            "p.kategorie, e.ereignistyp, "
+            "e.startmonat, e.endmonat, e.start_detail, e.end_detail, "
+            "(e.startmonat * 100 + CASE e.start_detail "
+            "WHEN 'Anfang' THEN 5 WHEN 'Ende' THEN 25 ELSE 15 "
+            "END) AS sortierwert "
+            "FROM ereignisse e "
+            "JOIN plants p ON e.plant_id = p.id "
+            "WHERE p.aktiv = 1 "
+            "ORDER BY sortierwert ASC, p.name ASC"
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def add_plant(name: str, type: str, variety: str | None,

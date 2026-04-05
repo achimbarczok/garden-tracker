@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<a href="/" class="back-link">← Zurück zur Übersicht</a>
+
+<h2>🗓️ Ereignisse</h2>
+
+{% if ereignisse or filter_kategorie or filter_ereignis or filter_monat %}
+
+<div class="card" style="margin-bottom:1rem">
+    <form method="get" action="/ereignisse" class="filter-bar">
+        <div class="form-field">
+            <label style="font-size:.75rem">Kategorie</label>
+            <select name="kategorie" onchange="this.form.submit()">
+                <option value="">Alle Kategorien</option>
+                {% for k in valid_kategorien %}
+                <option value="{{ k }}" {% if filter_kategorie == k %}selected{% endif %}>{{ k }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label style="font-size:.75rem">Ereignistyp</label>
+            <select name="ereignis" onchange="this.form.submit()">
+                <option value="">Alle Ereignisse</option>
+                {% for et in valid_ereignistypen %}
+                <option value="{{ et }}" {% if filter_ereignis == et %}selected{% endif %}>{{ et }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label style="font-size:.75rem">Im Monat</label>
+            <select name="monat" onchange="this.form.submit()">
+                <option value="">Alle Monate</option>
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}" {% if filter_monat == num|string %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if filter_kategorie or filter_ereignis or filter_monat %}
+        <div class="form-field" style="align-self:flex-end">
+            <a href="/ereignisse" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+{% if ereignisse %}
+<div class="table-wrap">
+<table>
+    <thead>
+        <tr>
+            <th>Pflanzenname</th>
+            <th>Ereignistyp</th>
+            <th>Zeitraum</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for e in ereignisse %}
+        <tr>
+            <td><a href="/plant/{{ e.plant_id }}/edit">{{ e.plant_name }}</a></td>
+            <td><span class="ereignis-tag">{{ e.ereignistyp }}</span></td>
+            <td>
+                {% if e.startmonat == e.endmonat and e.start_detail == e.end_detail %}
+                    {% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}
+                {% else %}
+                    {% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}–{% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="icon">🗓️</div>
+    <p>Keine Ereignisse gefunden.</p>
+    <p style="margin-top:.5rem"><a href="/ereignisse">Filter zurücksetzen</a></p>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <div class="icon">🗓️</div>
+    <p>Noch keine Ereignisse vorhanden.</p>
+</div>
+{% endif %}
+
+{% endblock %}

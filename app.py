@@ -12,6 +12,7 @@ from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 get_phaenologie_jahr, get_phaenologie_alle_jahre,
                 upsert_phaenologie, remove_phaenologie, get_aktuelle_phase,
                 duplicate_plant, set_plant_active,
+                get_all_beobachtungen, get_all_ereignisse, berechne_sortierwert,
                 PHAENOLOGISCHE_PHASEN, PHASEN_ICONS)
 
 PORT = int(os.environ.get("PORT", 5000))
@@ -40,7 +41,10 @@ except Exception as e:
 
 def _safe_next(next_url: str) -> str:
     """Return next_url only if it's a safe internal path, else '/'."""
-    if next_url and (next_url == "/" or next_url.startswith("/plant/") or next_url.startswith("/phaenologie")):
+    if next_url and (next_url == "/" or next_url.startswith("/plant/")
+                    or next_url.startswith("/phaenologie")
+                    or next_url.startswith("/beobachtungen")
+                    or next_url.startswith("/ereignisse")):
         return next_url
     return url_for("index")
 
@@ -481,6 +485,66 @@ def edit_beobachtung_route(beobachtung_id: int):
                        notiz,
                        start_detail, end_detail)
     return redirect(next_url)
+
+
+@app.route("/beobachtungen")
+def beobachtungen_page():
+    beobachtungen = get_all_beobachtungen()
+
+    filter_kategorie = request.args.get("kategorie", "")
+    filter_ereignis = request.args.get("ereignis", "")
+    filter_monat = request.args.get("monat", "")
+
+    if filter_kategorie:
+        beobachtungen = [b for b in beobachtungen if b["kategorie"] == filter_kategorie]
+    if filter_ereignis:
+        beobachtungen = [b for b in beobachtungen if b["ereignistyp"] == filter_ereignis]
+    if filter_monat:
+        try:
+            fm = int(filter_monat)
+        except ValueError:
+            fm = None
+        if fm and 1 <= fm <= 12:
+            beobachtungen = [b for b in beobachtungen if b["startmonat"] <= fm <= b["endmonat"]]
+
+    return render_template("beobachtungen.html",
+                           beobachtungen=beobachtungen,
+                           german_months=GERMAN_MONTHS,
+                           valid_kategorien=VALID_KATEGORIEN,
+                           valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                           filter_kategorie=filter_kategorie,
+                           filter_ereignis=filter_ereignis,
+                           filter_monat=filter_monat)
+
+
+@app.route("/ereignisse")
+def ereignisse_page():
+    ereignisse = get_all_ereignisse()
+
+    filter_kategorie = request.args.get("kategorie", "")
+    filter_ereignis = request.args.get("ereignis", "")
+    filter_monat = request.args.get("monat", "")
+
+    if filter_kategorie:
+        ereignisse = [e for e in ereignisse if e["kategorie"] == filter_kategorie]
+    if filter_ereignis:
+        ereignisse = [e for e in ereignisse if e["ereignistyp"] == filter_ereignis]
+    if filter_monat:
+        try:
+            fm = int(filter_monat)
+        except ValueError:
+            fm = None
+        if fm and 1 <= fm <= 12:
+            ereignisse = [e for e in ereignisse if e["startmonat"] <= fm <= e["endmonat"]]
+
+    return render_template("ereignisse.html",
+                           ereignisse=ereignisse,
+                           german_months=GERMAN_MONTHS,
+                           valid_kategorien=VALID_KATEGORIEN,
+                           valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                           filter_kategorie=filter_kategorie,
+                           filter_ereignis=filter_ereignis,
+                           filter_monat=filter_monat)
 
 
 @app.route("/phaenologie")

@@ -4,6 +4,8 @@ import os
 import sys
 import pytest
 
+import db
+
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
@@ -127,3 +129,140 @@ def test_migration_adds_aktiv_column(tmp_path, monkeypatch):
         assert row["aktiv"] == 1, (
             f"Expected aktiv=1 for existing plant '{row['name']}', got {row['aktiv']}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Example-based tests for chronologische-listen feature (Tasks 7.1–7.9)
+# ---------------------------------------------------------------------------
+
+
+def _add_plant_with_beobachtung(kategorie="Obst", ereignistyp="Blüte"):
+    """Helper: add a plant with one Beobachtung, return plant_id."""
+    db.add_plant("Testpflanze", "Obstbaum", None, "Sonne", None,
+                 kategorie=kategorie)
+    plants = db.get_all_plants()
+    pid = plants[0]["id"]
+    db.add_beobachtung(pid, 2024, ereignistyp, 3, 5, notiz="Testnotiz")
+    return pid
+
+
+def _add_plant_with_ereignis(kategorie="Obst", ereignistyp="Ernte"):
+    """Helper: add a plant with one Ereignis, return plant_id."""
+    db.add_plant("Testpflanze", "Obstbaum", None, "Sonne", None,
+                 kategorie=kategorie)
+    plants = db.get_all_plants()
+    pid = plants[0]["id"]
+    db.add_ereignis(pid, ereignistyp, 4, 6)
+    return pid
+
+
+def test_navigation_links(client):
+    """GET / → HTML contains navigation links to /beobachtungen and /ereignisse.
+
+    Requirements: 1.1, 1.2, 1.3
+    """
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert 'href="/beobachtungen"' in html
+    assert 'href="/ereignisse"' in html
+
+
+def test_filterleiste_beobachtungen(client):
+    """GET /beobachtungen with data → HTML contains filter dropdowns.
+
+    Requirements: 5.1
+    """
+    _add_plant_with_beobachtung()
+    response = client.get("/beobachtungen")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert 'name="kategorie"' in html
+    assert 'name="ereignis"' in html
+    assert 'name="monat"' in html
+
+
+def test_filterleiste_ereignisse(client):
+    """GET /ereignisse with data → HTML contains filter dropdowns.
+
+    Requirements: 6.1
+    """
+    _add_plant_with_ereignis()
+    response = client.get("/ereignisse")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert 'name="kategorie"' in html
+    assert 'name="ereignis"' in html
+    assert 'name="monat"' in html
+
+
+def test_filter_reset_link_beobachtungen(client):
+    """GET /beobachtungen?kategorie=Obst → HTML contains 'Filter zurücksetzen'.
+
+    Requirements: 5.6
+    """
+    _add_plant_with_beobachtung(kategorie="Obst")
+    response = client.get("/beobachtungen?kategorie=Obst")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Filter zurücksetzen" in html
+
+
+def test_filter_reset_link_ereignisse(client):
+    """GET /ereignisse?ereignis=Ernte → HTML contains 'Filter zurücksetzen'.
+
+    Requirements: 6.6
+    """
+    _add_plant_with_ereignis(ereignistyp="Ernte")
+    response = client.get("/ereignisse?ereignis=Ernte")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Filter zurücksetzen" in html
+
+
+def test_leerer_zustand_beobachtungen(client):
+    """GET /beobachtungen without data → 'Noch keine Beobachtungen vorhanden.'
+
+    Requirements: 7.1
+    """
+    response = client.get("/beobachtungen")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Noch keine Beobachtungen vorhanden." in html
+
+
+def test_leerer_zustand_ereignisse(client):
+    """GET /ereignisse without data → 'Noch keine Ereignisse vorhanden.'
+
+    Requirements: 7.2
+    """
+    response = client.get("/ereignisse")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Noch keine Ereignisse vorhanden." in html
+
+
+def test_keine_treffer_beobachtungen(client):
+    """Filter with no matches → 'Keine Beobachtungen gefunden.' + reset link.
+
+    Requirements: 7.3
+    """
+    _add_plant_with_beobachtung(kategorie="Obst")
+    response = client.get("/beobachtungen?kategorie=Gemüse")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Keine Beobachtungen gefunden." in html
+    assert "Filter zurücksetzen" in html
+
+
+def test_keine_treffer_ereignisse(client):
+    """Filter with no matches → 'Keine Ereignisse gefunden.' + reset link.
+
+    Requirements: 7.4
+    """
+    _add_plant_with_ereignis(kategorie="Obst")
+    response = client.get("/ereignisse?kategorie=Gemüse")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Keine Ereignisse gefunden." in html
+    assert "Filter zurücksetzen" in html

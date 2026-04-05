@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<a href="/" class="back-link">← Zurück zur Übersicht</a>
+
+<h2>🔍 Beobachtungen</h2>
+
+{% if beobachtungen or filter_kategorie or filter_ereignis or filter_monat %}
+
+<div class="card" style="margin-bottom:1rem">
+    <form method="get" action="/beobachtungen" class="filter-bar">
+        <div class="form-field">
+            <label style="font-size:.75rem">Kategorie</label>
+            <select name="kategorie" onchange="this.form.submit()">
+                <option value="">Alle Kategorien</option>
+                {% for k in valid_kategorien %}
+                <option value="{{ k }}" {% if filter_kategorie == k %}selected{% endif %}>{{ k }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label style="font-size:.75rem">Ereignistyp</label>
+            <select name="ereignis" onchange="this.form.submit()">
+                <option value="">Alle Ereignisse</option>
+                {% for et in valid_ereignistypen %}
+                <option value="{{ et }}" {% if filter_ereignis == et %}selected{% endif %}>{{ et }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label style="font-size:.75rem">Im Monat</label>
+            <select name="monat" onchange="this.form.submit()">
+                <option value="">Alle Monate</option>
+                {% for num, name in german_months.items() %}
+                <option value="{{ num }}" {% if filter_monat == num|string %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if filter_kategorie or filter_ereignis or filter_monat %}
+        <div class="form-field" style="align-self:flex-end">
+            <a href="/beobachtungen" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+{% if beobachtungen %}
+<div class="table-wrap">
+<table>
+    <thead>
+        <tr>
+            <th>Pflanzenname</th>
+            <th>Jahr</th>
+            <th>Ereignistyp</th>
+            <th>Zeitraum</th>
+            <th class="hide-mobile">Notiz</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for b in beobachtungen %}
+        <tr>
+            <td><a href="/plant/{{ b.plant_id }}/edit">{{ b.plant_name }}</a></td>
+            <td>{{ b.jahr }}</td>
+            <td><span class="ereignis-tag">{{ b.ereignistyp }}</span></td>
+            <td>
+                {% if b.startmonat == b.endmonat and b.start_detail == b.end_detail %}
+                    {% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }}
+                {% else %}
+                    {% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }}–{% if b.end_detail %}{{ b.end_detail }} {% endif %}{{ german_months[b.endmonat] }}
+                {% endif %}
+            </td>
+            <td class="hide-mobile">{{ b.notiz or '' }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="icon">🔍</div>
+    <p>Keine Beobachtungen gefunden.</p>
+    <p style="margin-top:.5rem"><a href="/beobachtungen">Filter zurücksetzen</a></p>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <div class="icon">🔍</div>
+    <p>Noch keine Beobachtungen vorhanden.</p>
+</div>
+{% endif %}
+
+{% endblock %}
