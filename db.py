@@ -2,9 +2,14 @@ import os
 import re
 import sqlite3
 
+from flask import g
+
 DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
 
 _DETAIL_OFFSETS = {"Anfang": 5, "Mitte": 15, "Ende": 25}
+
+# Current schema version — bump when adding migrations
+SCHEMA_VERSION = 2
 
 
 def berechne_sortierwert(monat: int, detail: str | None) -> int:
@@ -18,80 +23,109 @@ def berechne_sortierwert(monat: int, detail: str | None) -> int:
 
 
 def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    """Get a database connection, reusing the Flask request-scoped one if available."""
+    try:
+        # Inside a Flask request: reuse connection from g
+        if "db" not in g:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            g.db = conn
+        return g.db
+    except RuntimeError:
+        # Outside Flask request context (init, tests, scripts): open a fresh connection
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
+
+
+def close_db(e=None) -> None:
+    """Close the request-scoped database connection if it exists."""
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def _get_schema_version(conn: sqlite3.Connection) -> int:
+    """Read the current schema version from the database (0 if table missing)."""
+    try:
+        row = conn.execute("SELECT version FROM schema_version").fetchone()
+        return row[0] if row else 0
+    except sqlite3.OperationalError:
+        return 0
+
+
+def _set_schema_version(conn: sqlite3.Connection, version: int) -> None:
+    """Store the schema version in the database."""
+    conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
+    conn.execute("DELETE FROM schema_version")
+    conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
+
+
+def _add_column_if_missing(conn: sqlite3.Connection, table: str, column: str, col_type: str) -> None:
+    """Add a column to a table if it doesn't already exist."""
+    cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
-    cols = {row[1] for row in conn.execute("PRAGMA table_info(plants)")}
-    if "lichtbedarf" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN lichtbedarf TEXT")
-    if "kommentar" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN kommentar TEXT")
-    if "lebensdauer" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN lebensdauer TEXT")
-    if "pflanzmonat" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN pflanzmonat INTEGER")
-    if "pflanzjahr" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN pflanzjahr INTEGER")
-    if "anzahl" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN anzahl INTEGER DEFAULT 1")
-    if "kategorie" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN kategorie TEXT")
-    if "beschreibung" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN beschreibung TEXT")
-    if "farbe" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN farbe TEXT")
-    if "aktiv" not in cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN aktiv INTEGER DEFAULT 1")
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS ereignisse (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            plant_id    INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
-            ereignistyp TEXT    NOT NULL,
-            startmonat  INTEGER NOT NULL,
-            endmonat    INTEGER NOT NULL
-        )
-    """)
-    # Migration: start_detail/end_detail für ereignisse
-    ecols = {row[1] for row in conn.execute("PRAGMA table_info(ereignisse)")}
-    if "start_detail" not in ecols:
-        conn.execute("ALTER TABLE ereignisse ADD COLUMN start_detail TEXT")
-    if "end_detail" not in ecols:
-        conn.execute("ALTER TABLE ereignisse ADD COLUMN end_detail TEXT")
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS beobachtungen (
-            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-            plant_id            INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
-            jahr                INTEGER NOT NULL,
-            ereignistyp         TEXT    NOT NULL,
-            startmonat          INTEGER NOT NULL,
-            endmonat            INTEGER NOT NULL,
-            phaenologische_phase TEXT,
-            notiz               TEXT
-        )
-    """)
-    # Migration: start_detail/end_detail für beobachtungen
-    bcols = {row[1] for row in conn.execute("PRAGMA table_info(beobachtungen)")}
-    if "start_detail" not in bcols:
-        conn.execute("ALTER TABLE beobachtungen ADD COLUMN start_detail TEXT")
-    if "end_detail" not in bcols:
-        conn.execute("ALTER TABLE beobachtungen ADD COLUMN end_detail TEXT")
-    # Phänologie-Tabelle
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS phaenologie (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            jahr        INTEGER NOT NULL,
-            phase       TEXT    NOT NULL,
-            startmonat  INTEGER NOT NULL,
-            start_detail TEXT,
-            endmonat    INTEGER NOT NULL,
-            end_detail  TEXT,
-            UNIQUE(jahr, phase)
-        )
-    """)
+    current = _get_schema_version(conn)
+
+    if current < 1:
+        # V1: plants extras, ereignisse, beobachtungen with detail columns
+        for col, col_type in [
+            ("lichtbedarf", "TEXT"), ("kommentar", "TEXT"), ("lebensdauer", "TEXT"),
+            ("pflanzmonat", "INTEGER"), ("pflanzjahr", "INTEGER"),
+            ("anzahl", "INTEGER DEFAULT 1"), ("kategorie", "TEXT"),
+            ("beschreibung", "TEXT"), ("farbe", "TEXT"), ("aktiv", "INTEGER DEFAULT 1"),
+        ]:
+            _add_column_if_missing(conn, "plants", col, col_type)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS ereignisse (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id    INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+                ereignistyp TEXT    NOT NULL,
+                startmonat  INTEGER NOT NULL,
+                endmonat    INTEGER NOT NULL
+            )
+        """)
+        _add_column_if_missing(conn, "ereignisse", "start_detail", "TEXT")
+        _add_column_if_missing(conn, "ereignisse", "end_detail", "TEXT")
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS beobachtungen (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id            INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+                jahr                INTEGER NOT NULL,
+                ereignistyp         TEXT    NOT NULL,
+                startmonat          INTEGER NOT NULL,
+                endmonat            INTEGER NOT NULL,
+                phaenologische_phase TEXT,
+                notiz               TEXT
+            )
+        """)
+        _add_column_if_missing(conn, "beobachtungen", "start_detail", "TEXT")
+        _add_column_if_missing(conn, "beobachtungen", "end_detail", "TEXT")
+
+    if current < 2:
+        # V2: Phänologie-Tabelle
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS phaenologie (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                jahr        INTEGER NOT NULL,
+                phase       TEXT    NOT NULL,
+                startmonat  INTEGER NOT NULL,
+                start_detail TEXT,
+                endmonat    INTEGER NOT NULL,
+                end_detail  TEXT,
+                UNIQUE(jahr, phase)
+            )
+        """)
+
+    _set_schema_version(conn, SCHEMA_VERSION)
     conn.commit()
 
 
@@ -167,8 +201,16 @@ def set_plant_active(plant_id: int, aktiv: int) -> None:
         conn.commit()
 
 
+def _raw_connection() -> sqlite3.Connection:
+    """Open a raw connection (bypasses Flask g). Used for init/scripts."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 def init_db() -> None:
-    with get_db() as conn:
+    with _raw_connection() as conn:
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS plants (

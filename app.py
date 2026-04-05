@@ -6,7 +6,7 @@ from datetime import date
 from flask import Flask, abort, redirect, render_template, request, url_for
 
 from db import (add_ereignis, add_plant, get_all_plants, get_plant,
-                init_db, remove_ereignis, remove_plant, update_plant,
+                init_db, close_db, remove_ereignis, remove_plant, update_plant,
                 update_ereignis, update_beobachtung,
                 add_beobachtung, remove_beobachtung,
                 get_phaenologie_jahr, get_phaenologie_alle_jahre,
@@ -31,6 +31,7 @@ VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bä
 VALID_DETAIL = {"", "Anfang", "Mitte", "Ende"}
 
 app = Flask(__name__)
+app.teardown_appcontext(close_db)
 
 try:
     init_db()
@@ -38,6 +39,10 @@ except Exception as e:
     logging.error(f"Datenbankfehler beim Start: {e}")
     sys.exit(1)
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _safe_next(next_url: str) -> str:
     """Return next_url only if it's a safe internal path, else '/'."""
@@ -47,6 +52,46 @@ def _safe_next(next_url: str) -> str:
                     or next_url.startswith("/ereignisse")):
         return next_url
     return url_for("index")
+
+
+def _render_index_error(error: str):
+    """Render index.html with an error message and HTTP 400."""
+    plants = get_all_plants()
+    return (
+        render_template(
+            "index.html",
+            plants=plants,
+            german_months=GERMAN_MONTHS,
+            valid_kategorien=VALID_KATEGORIEN,
+            valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+            filter_kategorie="",
+            filter_ereignis="",
+            filter_monat="",
+            show_inactive="",
+            aktuelle_phase=None,
+            phasen_icons=PHASEN_ICONS,
+            error=error,
+        ),
+        400,
+    )
+
+
+def _render_edit_error(plant: dict, error: str):
+    """Render edit.html with an error message and HTTP 400."""
+    return (
+        render_template(
+            "edit.html",
+            plant=plant,
+            german_months=GERMAN_MONTHS,
+            valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+            zeitraum_ereignistypen=sorted(ZEITRAUM_EREIGNISTYPEN),
+            valid_lebensdauer=sorted(VALID_LEBENSDAUER),
+            valid_kategorien=VALID_KATEGORIEN,
+            now_year=date.today().year,
+            error=error,
+        ),
+        400,
+    )
 
 
 @app.route("/")
@@ -114,47 +159,19 @@ def add():
         pflanzjahr = None
 
     if not name:
-        plants = get_all_plants()
-        return (
-            render_template(
-                "index.html",
-                plants=plants,
-                german_months=GERMAN_MONTHS,
-                valid_kategorien=VALID_KATEGORIEN,
-                error="Name darf nicht leer sein.",
-            ),
-            400,
-        )
-
+        return _render_index_error("Name darf nicht leer sein.")
     if kategorie not in VALID_KATEGORIEN:
-        plants = get_all_plants()
-        return (
-            render_template(
-                "index.html",
-                plants=plants,
-                german_months=GERMAN_MONTHS,
-                valid_kategorien=VALID_KATEGORIEN,
-                error="Bitte eine gültige Kategorie wählen.",
-            ),
-            400,
-        )
-
+        return _render_index_error("Bitte eine gültige Kategorie wählen.")
     if lichtbedarf not in VALID_LICHTBEDARF:
-        plants = get_all_plants()
-        return (
-            render_template(
-                "index.html",
-                plants=plants,
-                german_months=GERMAN_MONTHS,
-                valid_kategorien=VALID_KATEGORIEN,
-                error="Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.",
-            ),
-            400,
-        )
+        return _render_index_error("Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.")
+
+    # Farbe: nur übernehmen wenn explizit gesetzt (nicht den Default-Wert)
+    farbe_raw = request.form.get("farbe", "").strip()
+    farbe = farbe_raw if farbe_raw and farbe_raw != "#000000" else None
 
     add_plant(name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
               int(request.form.get("anzahl", 1) or 1), kategorie,
-              farbe=request.form.get("farbe", "").strip() or None)
+              farbe=farbe)
     return redirect(url_for("index"))
 
 
@@ -196,46 +213,11 @@ def edit_save(plant_id: int):
         pflanzjahr = None
 
     if not name:
-        return (
-            render_template(
-                "edit.html",
-                plant=plant,
-                german_months=GERMAN_MONTHS,
-                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                valid_kategorien=VALID_KATEGORIEN,
-                error="Name darf nicht leer sein.",
-            ),
-            400,
-        )
-
+        return _render_edit_error(plant, "Name darf nicht leer sein.")
     if kategorie not in VALID_KATEGORIEN:
-        return (
-            render_template(
-                "edit.html",
-                plant=plant,
-                german_months=GERMAN_MONTHS,
-                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                valid_kategorien=VALID_KATEGORIEN,
-                error="Bitte eine gültige Kategorie wählen.",
-            ),
-            400,
-        )
-
+        return _render_edit_error(plant, "Bitte eine gültige Kategorie wählen.")
     if lichtbedarf not in VALID_LICHTBEDARF:
-        return (
-            render_template(
-                "edit.html",
-                plant=plant,
-                german_months=GERMAN_MONTHS,
-                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                valid_kategorien=VALID_KATEGORIEN,
-                error="Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.",
-            ),
-            400,
-        )
+        return _render_edit_error(plant, "Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.")
 
     update_plant(plant_id, name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
                  int(request.form.get("anzahl", 1) or 1), kategorie,
@@ -253,63 +235,31 @@ def add_ereignis_route(plant_id: int):
         startmonat = int(request.form.get("startmonat", ""))
         endmonat = int(request.form.get("endmonat", ""))
     except (ValueError, TypeError):
-        plant = get_plant(plant_id)
-        return (
-            render_template(
-                "edit.html" if "/plant/" in next_url else "index.html",
-                plant=plant,
-                plants=get_all_plants() if "/plant/" not in next_url else None,
-                german_months=GERMAN_MONTHS,
-                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                error="Monat muss zwischen 1 und 12 liegen.",
-            ),
-            400,
-        )
+        if "/plant/" in next_url:
+            plant = get_plant(plant_id)
+            return _render_edit_error(plant, "Monat muss zwischen 1 und 12 liegen.")
+        return _render_index_error("Monat muss zwischen 1 und 12 liegen.")
 
     if ereignistyp not in VALID_EREIGNISTYPEN:
-        plant = get_plant(plant_id)
-        return (
-            render_template(
-                "edit.html" if "/plant/" in next_url else "index.html",
-                plant=plant,
-                plants=get_all_plants() if "/plant/" not in next_url else None,
-                german_months=GERMAN_MONTHS,
-                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                error="Ereignistyp ungültig.",
-            ),
-            400,
-        )
+        if "/plant/" in next_url:
+            plant = get_plant(plant_id)
+            return _render_edit_error(plant, "Ereignistyp ungültig.")
+        return _render_index_error("Ereignistyp ungültig.")
 
     if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
-        plant = get_plant(plant_id)
-        return (
-            render_template(
-                "edit.html" if "/plant/" in next_url else "index.html",
-                plant=plant,
-                plants=get_all_plants() if "/plant/" not in next_url else None,
-                german_months=GERMAN_MONTHS,
-                valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                error="Monat muss zwischen 1 und 12 liegen.",
-            ),
-            400,
-        )
+        if "/plant/" in next_url:
+            plant = get_plant(plant_id)
+            return _render_edit_error(plant, "Monat muss zwischen 1 und 12 liegen.")
+        return _render_index_error("Monat muss zwischen 1 und 12 liegen.")
 
     start_detail = request.form.get("start_detail", "").strip() or None
     if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
         end_detail = request.form.get("end_detail", "").strip() or None
         if startmonat > endmonat:
-            plant = get_plant(plant_id)
-            return (
-                render_template(
-                    "edit.html" if "/plant/" in next_url else "index.html",
-                    plant=plant,
-                    plants=get_all_plants() if "/plant/" not in next_url else None,
-                    german_months=GERMAN_MONTHS,
-                    valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                    error="Startmonat darf nicht größer als Endmonat sein.",
-                ),
-                400,
-            )
+            if "/plant/" in next_url:
+                plant = get_plant(plant_id)
+                return _render_edit_error(plant, "Startmonat darf nicht größer als Endmonat sein.")
+            return _render_index_error("Startmonat darf nicht größer als Endmonat sein.")
     else:
         endmonat = startmonat
         end_detail = start_detail
@@ -408,34 +358,22 @@ def add_beobachtung_route(plant_id: int):
         endmonat = int(request.form.get("endmonat", ""))
     except (ValueError, TypeError):
         plant = get_plant(plant_id)
-        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
-                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                               error="Ungültige Eingabe für Jahr oder Monat."), 400
+        return _render_edit_error(plant, "Ungültige Eingabe für Jahr oder Monat.")
 
     if ereignistyp not in VALID_EREIGNISTYPEN:
         plant = get_plant(plant_id)
-        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
-                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                               error="Ereignistyp ungültig."), 400
+        return _render_edit_error(plant, "Ereignistyp ungültig.")
 
     if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
         plant = get_plant(plant_id)
-        return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
-                               valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                               valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                               error="Monat muss zwischen 1 und 12 liegen."), 400
+        return _render_edit_error(plant, "Monat muss zwischen 1 und 12 liegen.")
 
     start_detail = request.form.get("start_detail", "").strip() or None
     if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
         end_detail = request.form.get("end_detail", "").strip() or None
         if startmonat > endmonat:
             plant = get_plant(plant_id)
-            return render_template("edit.html", plant=plant, german_months=GERMAN_MONTHS,
-                                   valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
-                                   valid_lebensdauer=sorted(VALID_LEBENSDAUER),
-                                   error="Startmonat darf nicht größer als Endmonat sein."), 400
+            return _render_edit_error(plant, "Startmonat darf nicht größer als Endmonat sein.")
     else:
         endmonat = startmonat
         end_detail = start_detail

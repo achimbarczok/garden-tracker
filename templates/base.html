@@ -8,15 +8,15 @@
 </head>
 <body>
     <header>
-        <div class="page-wrap" style="padding-top:0;padding-bottom:0;display:flex;justify-content:space-between;align-items:center">
-            <a href="/" style="color:var(--white);text-decoration:none">
+        <div class="header-inner page-wrap">
+            <a href="/" class="header-brand">
                 <h1>🌱 Garten-Tracker</h1>
                 <p class="subtitle">Mein persönlicher Gartenkalender</p>
             </a>
-            <nav>
-                <a href="/beobachtungen" style="color:var(--white);text-decoration:none;font-size:.85rem;opacity:.8">🔍 Beobachtungen</a>
-                <a href="/ereignisse" style="color:var(--white);text-decoration:none;font-size:.85rem;opacity:.8">🗓️ Ereignisse</a>
-                <a href="/phaenologie" style="color:var(--white);text-decoration:none;font-size:.85rem;opacity:.8">🍃 Phänologie</a>
+            <nav class="header-nav">
+                <a href="/beobachtungen" class="nav-link{% if request.path == '/beobachtungen' %} nav-active{% endif %}">🔍 Beobachtungen</a>
+                <a href="/ereignisse" class="nav-link{% if request.path == '/ereignisse' %} nav-active{% endif %}">🗓️ Ereignisse</a>
+                <a href="/phaenologie" class="nav-link{% if request.path.startswith('/phaenologie') %} nav-active{% endif %}">🍃 Phänologie</a>
             </nav>
         </div>
     </header>

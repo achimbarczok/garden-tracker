@@ -44,6 +44,19 @@ header {
   margin-bottom: 2rem;
 }
 
+.header-inner {
+  padding-top: 0;
+  padding-bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-brand {
+  color: var(--white);
+  text-decoration: none;
+}
+
 header h1 {
   font-size: 1.5rem;
   font-weight: 700;
@@ -54,6 +67,34 @@ header .subtitle {
   font-size: .85rem;
   opacity: .75;
   margin-top: .15rem;
+}
+
+/* ── Navigation ─────────────────────────────────────────────── */
+.header-nav {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+}
+
+.nav-link {
+  color: var(--white);
+  text-decoration: none;
+  font-size: .85rem;
+  opacity: .75;
+  padding: .25rem .5rem;
+  border-radius: var(--radius-sm);
+  transition: opacity .15s, background .15s;
+}
+
+.nav-link:hover {
+  opacity: 1;
+  background: rgba(255,255,255,.1);
+}
+
+.nav-link.nav-active {
+  opacity: 1;
+  background: rgba(255,255,255,.15);
+  font-weight: 600;
 }
 
 /* ── Section headings ───────────────────────────────────────── */
@@ -234,6 +275,17 @@ ul.ereignisse li {
   padding: .25rem .6rem;
   font-size: .78rem;
   border-radius: 4px;
+}
+
+/* ── Focus visible (keyboard accessibility) ─────────────────── */
+.btn:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--green-mid);
+  outline-offset: 2px;
 }
 
 /* ── Forms ──────────────────────────────────────────────────── */
