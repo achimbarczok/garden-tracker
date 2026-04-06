@@ -92,11 +92,11 @@
 {% endif %}
 
 <div class="card" style="margin-top:1.5rem">
-    <h3 style="margin-top:0">🗓️ Ereignis hinzufügen</h3>
+    <h3 style="margin-top:0">📝 Beobachtung hinzufügen</h3>
     {% if error %}
     <div class="error-message">{{ error }}</div>
     {% endif %}
-    <form method="post" action="/ereignis/add">
+    <form method="post" action="/beobachtung/add">
         <div class="form-grid">
             <div class="form-field">
                 <label>Pflanze *</label>
@@ -108,6 +108,11 @@
                     {% endif %}
                     {% endfor %}
                 </select>
+            </div>
+            <div class="form-field">
+                <label>Jahr *</label>
+                <input type="number" name="jahr" min="2000" max="2100"
+                       value="{{ now_year }}" required>
             </div>
             <div class="form-field">
                 <label>Ereignistyp</label>
@@ -151,9 +156,13 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-field">
+                <label>Notiz</label>
+                <input type="text" name="notiz" placeholder="z.B. sehr früh wegen warmem März">
+            </div>
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Ereignis hinzufügen</button>
+            <button type="submit" class="btn btn-primary">📝 Eintrag speichern</button>
         </div>
     </form>
 </div>

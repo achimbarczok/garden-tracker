@@ -178,15 +178,15 @@ def test_edit_button_still_present(client, plant_with_color):
 # ---------------------------------------------------------------------------
 
 def test_ereignis_form_present_on_beobachtungen(client):
-    """GET /beobachtungen → contains the Ereignis form posting to /ereignis/add.
+    """GET /beobachtungen → contains the Beobachtung form posting to /beobachtung/add.
 
     Requirements: 3.1
     """
     response = client.get("/beobachtungen")
     assert response.status_code == 200
     html = response.data.decode("utf-8")
-    assert 'action="/ereignis/add"' in html
-    assert "Ereignis hinzufügen" in html
+    assert 'action="/beobachtung/add"' in html
+    assert "Beobachtung hinzufügen" in html
 
 
 # ---------------------------------------------------------------------------
@@ -220,12 +220,13 @@ def test_ereignis_form_contains_expected_fields(client):
 # ---------------------------------------------------------------------------
 
 def test_error_when_no_plant_selected(client):
-    """POST /ereignis/add without plant_id → 400 with 'Bitte eine Pflanze auswählen.'
+    """POST /beobachtung/add without plant_id → 400 with 'Bitte eine Pflanze auswählen.'
 
     Requirements: 3.6
     """
-    response = client.post("/ereignis/add", data={
+    response = client.post("/beobachtung/add", data={
         "ereignistyp": "Ernte",
+        "jahr": "2026",
         "startmonat": "6",
         "endmonat": "8",
     })

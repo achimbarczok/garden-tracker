@@ -249,7 +249,7 @@ _VALID_DETAIL = ["", "Anfang", "Mitte", "Ende"]
 
 @st.composite
 def _valid_ereignis_data(draw):
-    """Generate valid event form data for POST /ereignis/add.
+    """Generate valid event form data for POST /beobachtung/add.
 
     For period events (Blüte, Ernte): startmonat <= endmonat.
     For non-period events: only startmonat matters (endmonat set by route).
@@ -258,6 +258,7 @@ def _valid_ereignis_data(draw):
     startmonat = draw(st.integers(min_value=1, max_value=12))
     start_detail = draw(st.sampled_from(_VALID_DETAIL))
     end_detail = draw(st.sampled_from(_VALID_DETAIL))
+    jahr = draw(st.integers(min_value=2000, max_value=2099))
 
     if ereignistyp in _ZEITRAUM_EREIGNISTYPEN:
         endmonat = draw(st.integers(min_value=startmonat, max_value=12))
@@ -270,6 +271,7 @@ def _valid_ereignis_data(draw):
         "endmonat": endmonat,
         "start_detail": start_detail,
         "end_detail": end_detail,
+        "jahr": jahr,
     }
 
 
@@ -277,7 +279,7 @@ def _valid_ereignis_data(draw):
 @given(data=_valid_ereignis_data())
 def test_gueltiges_ereignis_wird_ueber_tagebuchseite_gespeichert(data):
     """For any valid combination of active plant, valid event type, and valid
-    months (1-12), POST /ereignis/add saves the event and redirects to
+    months (1-12), POST /beobachtung/add saves the beobachtung and redirects to
     /beobachtungen.
 
     # Feature: ui-konsistenz-verbesserungen, Property 3: Gültiges Ereignis wird gespeichert
@@ -295,6 +297,7 @@ def test_gueltiges_ereignis_wird_ueber_tagebuchseite_gespeichert(data):
         form_data = {
             "plant_id": str(plant_id),
             "ereignistyp": data["ereignistyp"],
+            "jahr": str(data["jahr"]),
             "startmonat": str(data["startmonat"]),
             "start_detail": data["start_detail"],
         }
@@ -304,7 +307,7 @@ def test_gueltiges_ereignis_wird_ueber_tagebuchseite_gespeichert(data):
             form_data["end_detail"] = data["end_detail"]
 
         with app_module.app.test_client() as client:
-            resp = client.post("/ereignis/add", data=form_data)
+            resp = client.post("/beobachtung/add", data=form_data)
 
             # Should redirect (302) to /beobachtungen
             assert resp.status_code == 302, (
@@ -314,17 +317,17 @@ def test_gueltiges_ereignis_wird_ueber_tagebuchseite_gespeichert(data):
                 f"Expected redirect to /beobachtungen, got {resp.headers.get('Location')}"
             )
 
-        # Verify the event was saved in the DB
-        plant = db_mod.get_plant(plant_id)
-        assert plant is not None, "Plant should still exist"
-        ereignisse = plant["ereignisse"]
-        assert len(ereignisse) == 1, (
-            f"Expected exactly 1 ereignis, got {len(ereignisse)}"
+        # Verify the beobachtung was saved in the DB
+        beobachtungen = db_mod.get_all_beobachtungen()
+        matching = [b for b in beobachtungen if b["plant_id"] == plant_id]
+        assert len(matching) == 1, (
+            f"Expected exactly 1 beobachtung, got {len(matching)}"
         )
 
-        saved = ereignisse[0]
+        saved = matching[0]
         assert saved["ereignistyp"] == data["ereignistyp"]
         assert saved["startmonat"] == data["startmonat"]
+        assert saved["jahr"] == data["jahr"]
 
         if data["ereignistyp"] in _ZEITRAUM_EREIGNISTYPEN:
             assert saved["endmonat"] == data["endmonat"]
@@ -343,8 +346,8 @@ def test_gueltiges_ereignis_wird_ueber_tagebuchseite_gespeichert(data):
     invalid_ereignistyp=st.text().filter(lambda s: s not in set(_VALID_EREIGNISTYPEN)),
 )
 def test_ungueltiger_ereignistyp_wird_abgelehnt(invalid_ereignistyp):
-    """For any string NOT in VALID_EREIGNISTYPEN, POST /ereignis/add must
-    return 400 with error message and must NOT save any event.
+    """For any string NOT in VALID_EREIGNISTYPEN, POST /beobachtung/add must
+    return 400 with error message and must NOT save any beobachtung.
 
     # Feature: ui-konsistenz-verbesserungen, Property 4: Ungültiger Ereignistyp wird abgelehnt
 
@@ -361,6 +364,7 @@ def test_ungueltiger_ereignistyp_wird_abgelehnt(invalid_ereignistyp):
         form_data = {
             "plant_id": str(plant_id),
             "ereignistyp": invalid_ereignistyp,
+            "jahr": "2026",
             "startmonat": "6",
             "endmonat": "6",
             "start_detail": "",
@@ -368,7 +372,7 @@ def test_ungueltiger_ereignistyp_wird_abgelehnt(invalid_ereignistyp):
         }
 
         with app_module.app.test_client() as client:
-            resp = client.post("/ereignis/add", data=form_data)
+            resp = client.post("/beobachtung/add", data=form_data)
 
             # Must return 400
             assert resp.status_code == 400, (
@@ -383,10 +387,10 @@ def test_ungueltiger_ereignistyp_wird_abgelehnt(invalid_ereignistyp):
                 f"for invalid ereignistyp {invalid_ereignistyp!r}"
             )
 
-        # Verify no event was saved in the DB
-        plant = db_mod.get_plant(plant_id)
-        assert plant is not None, "Plant should still exist"
-        assert len(plant["ereignisse"]) == 0, (
-            f"Expected 0 ereignisse for invalid type {invalid_ereignistyp!r}, "
-            f"got {len(plant['ereignisse'])}"
+        # Verify no beobachtung was saved in the DB
+        beobachtungen = db_mod.get_all_beobachtungen()
+        matching = [b for b in beobachtungen if b["plant_id"] == plant_id]
+        assert len(matching) == 0, (
+            f"Expected 0 beobachtungen for invalid type {invalid_ereignistyp!r}, "
+            f"got {len(matching)}"
         )

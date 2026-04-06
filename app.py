@@ -148,6 +148,7 @@ def _render_beobachtungen_error(error: str):
             filter_kategorie="",
             filter_ereignis="",
             filter_monat="",
+            now_year=date.today().year,
             error=error,
         ),
         400,
@@ -353,8 +354,8 @@ def add_ereignis_route(plant_id: int):
     return redirect(next_url)
 
 
-@app.route("/ereignis/add", methods=["POST"])
-def add_ereignis_from_beobachtungen():
+@app.route("/beobachtung/add", methods=["POST"])
+def add_beobachtung_from_beobachtungen():
     # 1. Read and validate plant_id
     plant_id_raw = request.form.get("plant_id", "").strip()
     if not plant_id_raw:
@@ -375,7 +376,13 @@ def add_ereignis_from_beobachtungen():
     if ereignistyp not in VALID_EREIGNISTYPEN:
         return _render_beobachtungen_error("Ereignistyp ungültig.")
 
-    # 4. Validate startmonat
+    # 4. Validate jahr
+    try:
+        jahr = int(request.form.get("jahr", ""))
+    except (ValueError, TypeError):
+        return _render_beobachtungen_error("Ungültige Eingabe für Jahr.")
+
+    # 5. Validate startmonat
     try:
         startmonat = int(request.form.get("startmonat", ""))
     except (ValueError, TypeError):
@@ -385,8 +392,9 @@ def add_ereignis_from_beobachtungen():
         return _render_beobachtungen_error("Monat muss zwischen 1 und 12 liegen.")
 
     start_detail = request.form.get("start_detail", "").strip() or None
+    notiz = request.form.get("notiz", "").strip() or None
 
-    # 5. Period vs non-period handling
+    # 6. Period vs non-period handling
     if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
         try:
             endmonat = int(request.form.get("endmonat", ""))
@@ -404,9 +412,9 @@ def add_ereignis_from_beobachtungen():
         endmonat = startmonat
         end_detail = start_detail
 
-    # 6. Save and redirect
-    add_ereignis(plant_id, ereignistyp, startmonat, endmonat,
-                 start_detail, end_detail)
+    # 7. Save and redirect
+    add_beobachtung(plant_id, jahr, ereignistyp, startmonat, endmonat,
+                    notiz=notiz, start_detail=start_detail, end_detail=end_detail)
     return redirect("/beobachtungen")
 
 
@@ -667,6 +675,7 @@ def beobachtungen_page():
                            valid_kategorien=VALID_KATEGORIEN,
                            valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
                            zeitraum_ereignistypen=sorted(ZEITRAUM_EREIGNISTYPEN),
+                           now_year=date.today().year,
                            filter_kategorie=filter_kategorie,
                            filter_ereignis=filter_ereignis,
                            filter_monat=filter_monat)
