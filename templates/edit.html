@@ -102,54 +102,6 @@
 </form>
 </div>
 
-<!-- Fotos -->
-<h2>📷 Fotos</h2>
-<div class="card">
-    {% if plant.fotos %}
-    <div class="foto-galerie">
-        {% for foto in plant.fotos %}
-        <div class="foto-item{% if foto.ist_hauptbild %} foto-hauptbild{% endif %}">
-            <img src="/fotos/{{ foto.dateiname }}" alt="{{ foto.bezeichnung or plant.name }}">
-            {% if foto.ist_hauptbild %}
-            <span class="foto-stern">⭐ Hauptbild</span>
-            {% endif %}
-            {% if foto.bezeichnung %}
-            <span class="foto-bezeichnung">{{ foto.bezeichnung }}</span>
-            {% endif %}
-            <div class="foto-aktionen">
-                {% if not foto.ist_hauptbild %}
-                <form method="post" action="/foto/{{ foto.id }}/hauptbild" style="display:inline">
-                    <button type="submit" class="btn btn-outline btn-sm">⭐ Hauptbild</button>
-                </form>
-                {% endif %}
-                <form method="post" action="/foto/{{ foto.id }}/remove" style="display:inline">
-                    <button type="submit" class="btn btn-ghost btn-sm"
-                            onclick="return confirm('Foto wirklich löschen?')">🗑️</button>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Fotos vorhanden.</p>
-    {% endif %}
-
-    {% if plant.fotos|length < max_fotos %}
-    <h3>Foto hochladen</h3>
-    <form method="post" action="/plant/{{ plant.id }}/foto/upload" enctype="multipart/form-data">
-        <div class="form-inline-row">
-            <input type="file" name="foto" accept="image/jpeg,image/png" required>
-            <input type="text" name="bezeichnung" placeholder="Bezeichnung (optional)" style="max-width:200px">
-            <button type="submit" class="btn btn-primary btn-sm">📷 Hochladen</button>
-        </div>
-    </form>
-    {% else %}
-    <p style="color:var(--text-muted);font-size:.875rem;margin-top:1rem">
-        Maximum von {{ max_fotos }} Fotos erreicht. Bitte ein Foto löschen, um ein neues hochzuladen.
-    </p>
-    {% endif %}
-</div>
-
 <!-- Ereignisse -->
 <h2>🗓️ Erwartete Ereignisse</h2>
 <div class="card">
@@ -399,6 +351,54 @@
             <button type="submit" class="btn btn-primary">🔍 Beobachtung speichern</button>
         </div>
     </form>
+</div>
+
+<!-- Fotos -->
+<h2>📷 Fotos</h2>
+<div class="card">
+    {% if plant.fotos %}
+    <div class="foto-galerie">
+        {% for foto in plant.fotos %}
+        <div class="foto-item{% if foto.ist_hauptbild %} foto-hauptbild{% endif %}">
+            <img src="/fotos/{{ foto.dateiname }}" alt="{{ foto.bezeichnung or plant.name }}">
+            {% if foto.ist_hauptbild %}
+            <span class="foto-stern">⭐ Hauptbild</span>
+            {% endif %}
+            {% if foto.bezeichnung %}
+            <span class="foto-bezeichnung">{{ foto.bezeichnung }}</span>
+            {% endif %}
+            <div class="foto-aktionen">
+                {% if not foto.ist_hauptbild %}
+                <form method="post" action="/foto/{{ foto.id }}/hauptbild" style="display:inline">
+                    <button type="submit" class="btn btn-outline btn-sm">⭐ Hauptbild</button>
+                </form>
+                {% endif %}
+                <form method="post" action="/foto/{{ foto.id }}/remove" style="display:inline">
+                    <button type="submit" class="btn btn-ghost btn-sm"
+                            onclick="return confirm('Foto wirklich löschen?')">🗑️</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Fotos vorhanden.</p>
+    {% endif %}
+
+    {% if plant.fotos|length < max_fotos %}
+    <h3>Foto hochladen</h3>
+    <form method="post" action="/plant/{{ plant.id }}/foto/upload" enctype="multipart/form-data">
+        <div class="form-inline-row">
+            <input type="file" name="foto" accept="image/jpeg,image/png" required>
+            <input type="text" name="bezeichnung" placeholder="Bezeichnung (optional)" style="max-width:200px">
+            <button type="submit" class="btn btn-primary btn-sm">📷 Hochladen</button>
+        </div>
+    </form>
+    {% else %}
+    <p style="color:var(--text-muted);font-size:.875rem;margin-top:1rem">
+        Maximum von {{ max_fotos }} Fotos erreicht. Bitte ein Foto löschen, um ein neues hochzuladen.
+    </p>
+    {% endif %}
 </div>
 
 <!-- Pflanze duplizieren -->
