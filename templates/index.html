@@ -84,12 +84,12 @@
     {% for plant in plants %}
         <tr{% if plant.aktiv == 0 %} class="row-inactive"{% endif %}>
             <td>{% if plant.farbe %}<span class="color-dot" style="background:{{ plant.farbe }}"></span>{% endif %}<strong>{{ plant.name }}</strong>{% if plant.aktiv == 0 %} <span class="badge badge-inactive">inaktiv</span>{% endif %}{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
-            <td>{{ plant.kategorie or '' }}</td>
-            <td>
+            <td class="hide-mobile">{{ plant.kategorie or '' }}</td>
+            <td class="hide-mobile">
                 {% if plant.type %}{{ plant.type }}{% endif %}
                 {% if plant.variety %}<br><span style="color:var(--text-muted);font-size:.8rem">{{ plant.variety }}</span>{% endif %}
             </td>
-            <td>
+            <td class="hide-mobile">
                 {% if plant.lichtbedarf == "Sonne" %}
                     <span class="badge badge-sun">☀️ Sonne</span>
                 {% elif plant.lichtbedarf == "Halbschatten" %}
@@ -98,7 +98,7 @@
                     <span class="badge badge-shade">🌥️ Schatten</span>
                 {% endif %}
             </td>
-            <td>
+            <td class="hide-mobile">
                 {% if plant.lebensdauer == "Einjährig" %}
                     <span class="badge badge-annual">Einjährig</span>
                 {% elif plant.lebensdauer == "Zweijährig" %}
@@ -121,7 +121,7 @@
                 <ul class="ereignisse">
                     {% for e in plant.ereignisse %}
                     <li>
-                        <span class="ereignis-tag">{{ e.ereignistyp }}</span>
+                        <span class="ereignis-tag" data-typ="{{ e.ereignistyp }}">{{ e.ereignistyp }}</span>
                         {% if e.startmonat == e.endmonat and e.start_detail == e.end_detail %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}{% else %}{% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}–{% if e.end_detail %}{{ e.end_detail }} {% endif %}{{ german_months[e.endmonat] }}{% endif %}
                     </li>
                     {% endfor %}

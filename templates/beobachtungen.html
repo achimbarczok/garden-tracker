@@ -62,7 +62,7 @@
         <tr>
             <td><a href="/plant/{{ b.plant_id }}/edit">{{ b.plant_name }}</a></td>
             <td>{{ b.jahr }}</td>
-            <td><span class="ereignis-tag">{{ b.ereignistyp }}</span></td>
+            <td><span class="ereignis-tag" data-typ="{{ b.ereignistyp }}">{{ b.ereignistyp }}</span></td>
             <td>
                 {% if b.startmonat == b.endmonat and b.start_detail == b.end_detail %}
                     {% if b.start_detail %}{{ b.start_detail }} {% endif %}{{ german_months[b.startmonat] }}

@@ -59,7 +59,7 @@
     {% for e in ereignisse %}
         <tr>
             <td><a href="/plant/{{ e.plant_id }}/edit">{{ e.plant_name }}</a></td>
-            <td><span class="ereignis-tag">{{ e.ereignistyp }}</span></td>
+            <td><span class="ereignis-tag" data-typ="{{ e.ereignistyp }}">{{ e.ereignistyp }}</span></td>
             <td>
                 {% if e.startmonat == e.endmonat and e.start_detail == e.end_detail %}
                     {% if e.start_detail %}{{ e.start_detail }} {% endif %}{{ german_months[e.startmonat] }}

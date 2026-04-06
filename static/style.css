@@ -238,14 +238,23 @@ ul.ereignisse li {
 }
 
 .ereignis-tag {
-  background: var(--green-pale);
-  color: var(--green-dark);
   border-radius: 99px;
   padding: .05rem .4rem;
   font-size: .65rem;
   font-weight: 600;
   white-space: nowrap;
+  background: var(--green-pale);
+  color: var(--green-dark);
 }
+
+.ereignis-tag[data-typ="Blüte"]       { background: #fce4ec; color: #880e4f; }
+.ereignis-tag[data-typ="Ernte"]       { background: #fff3e0; color: #e65100; }
+.ereignis-tag[data-typ="Düngen"]      { background: #e8f5e9; color: #2e7d32; }
+.ereignis-tag[data-typ="Rückschnitt"] { background: #e3f2fd; color: #1565c0; }
+.ereignis-tag[data-typ="Vorkultur"]   { background: #f3e5f5; color: #6a1b9a; }
+.ereignis-tag[data-typ="Auspflanzen"] { background: #e0f2f1; color: #00695c; }
+.ereignis-tag[data-typ="Direktsaat"]  { background: #fff8e1; color: #f57f17; }
+.ereignis-tag[data-typ="Pflege"]      { background: #fbe9e7; color: #bf360c; }
 
 /* ── Buttons ────────────────────────────────────────────────── */
 .btn {
@@ -540,16 +549,21 @@ summary:focus-visible {
 
   .table-wrap { border-radius: 0; margin: 0 -1rem 1.5rem; }
 
-  table, thead, tbody, tr, td { display: block; width: 100%; }
+  table, thead, tbody { display: block; width: 100%; }
   thead { display: none; }
 
   tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .25rem .5rem;
     border: none;
     border-bottom: 2px solid var(--green-pale);
-    padding: .75rem 1rem;
+    padding: .5rem .75rem;
   }
 
-  td { border: none; padding: .2rem 0; }
+  td { display: block; border: none; padding: 0; }
+  td:first-child { flex: 1; min-width: 0; }
 
   .btn, button, a.btn, select, input {
     min-height: 44px;
@@ -575,20 +589,10 @@ summary:focus-visible {
     margin-bottom: .2rem;
   }
 
-  /* Compact cards */
-  tbody tr {
-    border: none;
-    border-bottom: 2px solid var(--green-pale);
-    padding: .4rem .6rem;
-  }
-
-  td { padding: .1rem 0; font-size: .9rem; }
-
   /* Action buttons inline */
   .action-cell {
     display: flex;
     gap: .5rem;
-    margin-top: .15rem;
   }
 
   .card { padding: .75rem .85rem; }
