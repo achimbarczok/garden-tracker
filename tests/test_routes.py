@@ -228,7 +228,7 @@ def test_leerer_zustand_beobachtungen(client):
     response = client.get("/beobachtungen")
     assert response.status_code == 200
     html = response.data.decode("utf-8")
-    assert "Noch keine Beobachtungen vorhanden." in html
+    assert "Noch keine Tagebucheinträge vorhanden." in html
 
 
 def test_leerer_zustand_ereignisse(client):
@@ -239,7 +239,7 @@ def test_leerer_zustand_ereignisse(client):
     response = client.get("/ereignisse")
     assert response.status_code == 200
     html = response.data.decode("utf-8")
-    assert "Noch keine Ereignisse vorhanden." in html
+    assert "Noch keine Einträge im Jahresplan." in html
 
 
 def test_keine_treffer_beobachtungen(client):
@@ -251,7 +251,7 @@ def test_keine_treffer_beobachtungen(client):
     response = client.get("/beobachtungen?kategorie=Gemüse")
     assert response.status_code == 200
     html = response.data.decode("utf-8")
-    assert "Keine Beobachtungen gefunden." in html
+    assert "Keine Tagebucheinträge gefunden." in html
     assert "Filter zurücksetzen" in html
 
 
@@ -264,5 +264,5 @@ def test_keine_treffer_ereignisse(client):
     response = client.get("/ereignisse?kategorie=Gemüse")
     assert response.status_code == 200
     html = response.data.decode("utf-8")
-    assert "Keine Ereignisse gefunden." in html
+    assert "Keine Einträge gefunden." in html
     assert "Filter zurücksetzen" in html

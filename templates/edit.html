@@ -103,7 +103,7 @@
 </div>
 
 <!-- Ereignisse -->
-<h2>🗓️ Erwartete Ereignisse</h2>
+<h2>🗓️ Jahresplan</h2>
 <div class="card">
     {% if plant.ereignisse %}
     <div style="margin-bottom:1rem">
@@ -158,10 +158,10 @@
         {% endfor %}
     </div>
     {% else %}
-    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Ereignisse eingetragen.</p>
+    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Einträge im Jahresplan.</p>
     {% endif %}
 
-    <h3>Ereignis hinzufügen</h3>
+    <h3>Eintrag hinzufügen</h3>
     <form method="post" action="/plant/{{ plant.id }}/ereignis/add" id="add-ereignis-form">
         <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
         <div class="form-inline-row">
@@ -205,7 +205,7 @@
 </div>
 
 <!-- Beobachtungen -->
-<h2>🔍 Beobachtungen</h2>
+<h2>📝 Tagebuch</h2>
 <div class="card">
     {% if plant.beobachtungen %}
     <div style="margin-bottom:1rem">
@@ -284,10 +284,10 @@
         {% endfor %}
     </div>
     {% else %}
-    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Beobachtungen eingetragen.</p>
+    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:1rem">Noch keine Tagebucheinträge.</p>
     {% endif %}
 
-    <h3>Beobachtung hinzufügen</h3>
+    <h3>Tagebucheintrag hinzufügen</h3>
     <form method="post" action="/plant/{{ plant.id }}/beobachtung/add">
         <input type="hidden" name="next" value="/plant/{{ plant.id }}/edit">
         <div class="form-grid">
@@ -348,7 +348,7 @@
             </div>
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">🔍 Beobachtung speichern</button>
+            <button type="submit" class="btn btn-primary">📝 Eintrag speichern</button>
         </div>
     </form>
 </div>
@@ -405,7 +405,7 @@
 <h2>📋 Pflanze duplizieren</h2>
 <div class="card">
     <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:.75rem">
-        Erstellt eine Kopie dieser Pflanze mit allen Stammdaten und Ereignissen.
+        Erstellt eine Kopie dieser Pflanze mit allen Stammdaten und Jahresplan.
     </p>
     <form method="post" action="/plant/{{ plant.id }}/duplicate" style="display:inline">
         <button type="submit" class="btn btn-outline btn-sm">📋 Duplizieren</button>
@@ -439,7 +439,7 @@
 <h2>⚠️ Pflanze entfernen</h2>
 <div class="card" style="border-color:#f5c6cb">
     <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:.75rem">
-        Diese Aktion löscht die Pflanze samt allen Ereignissen und Beobachtungen unwiderruflich.
+        Diese Aktion löscht die Pflanze samt Jahresplan und Tagebuch unwiderruflich.
     </p>
     <form method="post" action="/remove/{{ plant.id }}">
         <button type="submit" class="btn btn-danger btn-sm"

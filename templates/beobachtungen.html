@@ -4,7 +4,7 @@
 
 <a href="/" class="back-link">← Zurück zur Übersicht</a>
 
-<h2>🔍 Beobachtungen</h2>
+<h2>📝 Tagebuch</h2>
 
 {% if beobachtungen or filter_kategorie or filter_ereignis or filter_monat %}
 
@@ -78,16 +78,16 @@
 </div>
 {% else %}
 <div class="empty-state">
-    <div class="icon">🔍</div>
-    <p>Keine Beobachtungen gefunden.</p>
+    <div class="icon">📝</div>
+    <p>Keine Tagebucheinträge gefunden.</p>
     <p style="margin-top:.5rem"><a href="/beobachtungen">Filter zurücksetzen</a></p>
 </div>
 {% endif %}
 
 {% else %}
 <div class="empty-state">
-    <div class="icon">🔍</div>
-    <p>Noch keine Beobachtungen vorhanden.</p>
+    <div class="icon">📝</div>
+    <p>Noch keine Tagebucheinträge vorhanden.</p>
 </div>
 {% endif %}
 
