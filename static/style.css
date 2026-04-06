@@ -528,15 +528,21 @@ summary:focus-visible {
   tbody tr {
     border: none;
     border-bottom: 2px solid var(--green-pale);
-    padding: .5rem .75rem;
+    padding: .4rem .6rem;
   }
 
-  td { padding: .15rem 0; }
+  td { padding: .1rem 0; font-size: .9rem; }
 
   /* Action buttons inline */
   .action-cell {
     display: flex;
     gap: .5rem;
-    margin-top: .25rem;
+    margin-top: .15rem;
   }
+
+  .card { padding: .75rem .85rem; }
+
+  h2 { margin: 1.25rem 0 .5rem; }
+
+  .page-wrap { padding: 0 .5rem 2rem; }
 }

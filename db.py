@@ -231,13 +231,15 @@ def get_all_plants(include_inactive: bool = False) -> list[dict]:
             rows = conn.execute(
                 "SELECT id, name, type, variety, lichtbedarf, kommentar, "
                 "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
-                "beschreibung, farbe, aktiv FROM plants"
+                "beschreibung, farbe, aktiv FROM plants "
+                "ORDER BY name COLLATE NOCASE"
             ).fetchall()
         else:
             rows = conn.execute(
                 "SELECT id, name, type, variety, lichtbedarf, kommentar, "
                 "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
-                "beschreibung, farbe, aktiv FROM plants WHERE aktiv = 1"
+                "beschreibung, farbe, aktiv FROM plants WHERE aktiv = 1 "
+                "ORDER BY name COLLATE NOCASE"
             ).fetchall()
         plants = []
         for row in rows:

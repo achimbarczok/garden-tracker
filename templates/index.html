@@ -72,9 +72,9 @@
         <tr>
             <th>Name</th>
             <th>Kategorie</th>
-            <th class="hide-mobile">Typ / Sorte</th>
+            <th>Typ / Sorte</th>
             <th>Lichtbedarf</th>
-            <th class="hide-mobile">Lebensdauer</th>
+            <th>Lebensdauer</th>
             <th class="hide-mobile">Gepflanzt</th>
             <th class="hide-mobile">Ereignisse</th>
             <th>Aktionen</th>
@@ -85,7 +85,7 @@
         <tr{% if plant.aktiv == 0 %} class="row-inactive"{% endif %}>
             <td>{% if plant.farbe %}<span class="color-dot" style="background:{{ plant.farbe }}"></span>{% endif %}<strong>{{ plant.name }}</strong>{% if plant.aktiv == 0 %} <span class="badge badge-inactive">inaktiv</span>{% endif %}{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
             <td>{{ plant.kategorie or '' }}</td>
-            <td class="hide-mobile">
+            <td>
                 {% if plant.type %}{{ plant.type }}{% endif %}
                 {% if plant.variety %}<br><span style="color:var(--text-muted);font-size:.8rem">{{ plant.variety }}</span>{% endif %}
             </td>
@@ -98,7 +98,7 @@
                     <span class="badge badge-shade">🌥️ Schatten</span>
                 {% endif %}
             </td>
-            <td class="hide-mobile">
+            <td>
                 {% if plant.lebensdauer == "Einjährig" %}
                     <span class="badge badge-annual">Einjährig</span>
                 {% elif plant.lebensdauer == "Zweijährig" %}
