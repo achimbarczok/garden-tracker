@@ -1,6 +1,7 @@
 import os
 import re
 import sqlite3
+from pathlib import Path
 
 from flask import g
 
@@ -9,7 +10,7 @@ DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
 _DETAIL_OFFSETS = {"Anfang": 5, "Mitte": 15, "Ende": 25}
 
 # Current schema version — bump when adding migrations
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def berechne_sortierwert(monat: int, detail: str | None) -> int:
@@ -122,6 +123,17 @@ def _migrate(conn: sqlite3.Connection) -> None:
                 endmonat    INTEGER NOT NULL,
                 end_detail  TEXT,
                 UNIQUE(jahr, phase)
+            )
+        """)
+
+    if current < 3:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS fotos (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id      INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+                dateiname     TEXT    NOT NULL,
+                bezeichnung   TEXT,
+                ist_hauptbild INTEGER DEFAULT 0
             )
         """)
 
@@ -320,9 +332,16 @@ def add_plant(name: str, type: str, variety: str | None,
 
 
 def remove_plant(plant_id: int) -> None:
+    fotos_dir = Path(DB_PATH).parent / "fotos"
+    dateinamen = get_fotos_by_plant_id(plant_id)
     with get_db() as conn:
         conn.execute("DELETE FROM plants WHERE id = ?", (plant_id,))
         conn.commit()
+    for name in dateinamen:
+        try:
+            (fotos_dir / name).unlink()
+        except OSError:
+            pass
 
 
 def add_ereignis(plant_id: int, ereignistyp: str,
@@ -383,6 +402,7 @@ def get_plant(plant_id: int) -> dict | None:
             (plant_id,),
         ).fetchall()
         plant["beobachtungen"] = [dict(b) for b in beobachtungen]
+        plant["fotos"] = get_fotos(plant_id)
     return plant
 
 
@@ -463,6 +483,90 @@ def update_beobachtung(beobachtung_id: int, jahr: int, ereignistyp: str,
              phaenologische_phase, notiz, start_detail, end_detail, beobachtung_id),
         )
         conn.commit()
+
+
+def get_fotos(plant_id: int) -> list[dict]:
+    """Get all fotos for a plant, sorted by id."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, plant_id, dateiname, bezeichnung, ist_hauptbild "
+            "FROM fotos WHERE plant_id = ? ORDER BY id",
+            (plant_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def count_fotos(plant_id: int) -> int:
+    """Count fotos for a plant."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM fotos WHERE plant_id = ?",
+            (plant_id,),
+        ).fetchone()
+    return row[0]
+
+
+def add_foto(plant_id: int, dateiname: str, bezeichnung: str | None,
+             ist_hauptbild: int = 0) -> int:
+    """Insert a foto and return the new id.
+
+    If ist_hauptbild=1, first set all other fotos of the plant to 0.
+    """
+    with get_db() as conn:
+        if ist_hauptbild:
+            conn.execute(
+                "UPDATE fotos SET ist_hauptbild = 0 WHERE plant_id = ?",
+                (plant_id,),
+            )
+        cursor = conn.execute(
+            "INSERT INTO fotos (plant_id, dateiname, bezeichnung, ist_hauptbild) "
+            "VALUES (?, ?, ?, ?)",
+            (plant_id, dateiname, bezeichnung, ist_hauptbild),
+        )
+        conn.commit()
+    return cursor.lastrowid
+
+
+def get_foto(foto_id: int) -> dict | None:
+    """Get a single foto by id."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, plant_id, dateiname, bezeichnung, ist_hauptbild "
+            "FROM fotos WHERE id = ?",
+            (foto_id,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def remove_foto(foto_id: int) -> None:
+    """Delete a foto by id."""
+    with get_db() as conn:
+        conn.execute("DELETE FROM fotos WHERE id = ?", (foto_id,))
+        conn.commit()
+
+
+def set_hauptbild(foto_id: int, plant_id: int) -> None:
+    """Atomic update: set all fotos of plant to ist_hauptbild=0, then set the chosen one to 1."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE fotos SET ist_hauptbild = 0 WHERE plant_id = ?",
+            (plant_id,),
+        )
+        conn.execute(
+            "UPDATE fotos SET ist_hauptbild = 1 WHERE id = ?",
+            (foto_id,),
+        )
+        conn.commit()
+
+
+def get_fotos_by_plant_id(plant_id: int) -> list[str]:
+    """Return list of dateiname strings for a plant (used when deleting a plant)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT dateiname FROM fotos WHERE plant_id = ?",
+            (plant_id,),
+        ).fetchall()
+    return [r[0] for r in rows]
 
 
 PHAENOLOGISCHE_PHASEN = [

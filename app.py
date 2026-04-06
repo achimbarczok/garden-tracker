@@ -1,9 +1,13 @@
 import logging
 import os
 import sys
+import uuid
 from datetime import date
+from io import BytesIO
+from pathlib import Path
 
-from flask import Flask, abort, redirect, render_template, request, url_for
+from flask import Flask, abort, redirect, render_template, request, send_from_directory, url_for
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 init_db, close_db, remove_ereignis, remove_plant, update_plant,
@@ -13,6 +17,8 @@ from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 upsert_phaenologie, remove_phaenologie, get_aktuelle_phase,
                 duplicate_plant, set_plant_active,
                 get_all_beobachtungen, get_all_ereignisse, berechne_sortierwert,
+                add_foto, get_foto, remove_foto, set_hauptbild, count_fotos,
+                get_fotos_by_plant_id,
                 PHAENOLOGISCHE_PHASEN, PHASEN_ICONS)
 
 PORT = int(os.environ.get("PORT", 5000))
@@ -30,7 +36,14 @@ VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
 VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung", "Gartenpflege"]
 VALID_DETAIL = {"", "Anfang", "Mitte", "Ende"}
 
+MAX_FOTO_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FOTOS_PER_PLANT = 5
+MAX_FOTO_DIMENSION = 640
+FOTOS_DIR = Path(os.environ.get("DB_PATH", "/data/plants.db")).parent / "fotos"
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}
+
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = MAX_FOTO_SIZE
 app.teardown_appcontext(close_db)
 
 try:
@@ -38,6 +51,8 @@ try:
 except Exception as e:
     logging.error(f"Datenbankfehler beim Start: {e}")
     sys.exit(1)
+
+os.makedirs(FOTOS_DIR, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -88,10 +103,28 @@ def _render_edit_error(plant: dict, error: str):
             valid_lebensdauer=sorted(VALID_LEBENSDAUER),
             valid_kategorien=VALID_KATEGORIEN,
             now_year=date.today().year,
+            max_fotos=MAX_FOTOS_PER_PLANT,
             error=error,
         ),
         400,
     )
+
+
+def process_image(file_storage) -> bytes:
+    """Process uploaded image: EXIF transpose, resize to max 640px, convert to JPEG."""
+    try:
+        img = Image.open(file_storage)
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGB")
+        if max(img.size) > MAX_FOTO_DIMENSION:
+            img.thumbnail((MAX_FOTO_DIMENSION, MAX_FOTO_DIMENSION), Image.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        return buf.getvalue()
+    except UnidentifiedImageError:
+        raise
+    except Exception:
+        raise
 
 
 @app.route("/")
@@ -189,6 +222,7 @@ def edit_route(plant_id: int):
         valid_lebensdauer=sorted(VALID_LEBENSDAUER),
         valid_kategorien=VALID_KATEGORIEN,
         now_year=date.today().year,
+        max_fotos=MAX_FOTOS_PER_PLANT,
     )
 
 
@@ -343,6 +377,78 @@ def activate_route(plant_id: int):
     except Exception:
         return redirect(url_for("index"))
     return redirect(f"/plant/{plant_id}/edit")
+
+
+@app.route("/plant/<int:plant_id>/foto/upload", methods=["POST"])
+def upload_foto_route(plant_id: int):
+    plant = get_plant(plant_id)
+    if plant is None:
+        abort(404)
+
+    foto = request.files.get("foto")
+    if not foto or foto.filename == "":
+        return _render_edit_error(plant, "Bitte eine Bilddatei auswählen.")
+
+    if foto.content_type not in ALLOWED_MIME_TYPES:
+        return _render_edit_error(plant, "Nur JPEG- und PNG-Dateien sind erlaubt.")
+
+    if count_fotos(plant_id) >= MAX_FOTOS_PER_PLANT:
+        return _render_edit_error(plant, f"Maximum von {MAX_FOTOS_PER_PLANT} Fotos erreicht.")
+
+    try:
+        data = process_image(foto)
+    except Exception:
+        return _render_edit_error(plant, "Das Bild konnte nicht verarbeitet werden.")
+
+    dateiname = f"{uuid.uuid4()}.jpg"
+    filepath = FOTOS_DIR / dateiname
+
+    ist_hauptbild = 1 if count_fotos(plant_id) == 0 else 0
+    bezeichnung = request.form.get("bezeichnung", "").strip() or None
+
+    try:
+        filepath.write_bytes(data)
+    except OSError:
+        return _render_edit_error(plant, "Fehler beim Speichern der Datei.")
+
+    try:
+        add_foto(plant_id, dateiname, bezeichnung, ist_hauptbild)
+    except Exception:
+        try:
+            filepath.unlink()
+        except OSError:
+            pass
+        return _render_edit_error(plant, "Fehler beim Speichern in der Datenbank.")
+
+    return redirect(f"/plant/{plant_id}/edit")
+
+
+@app.route("/foto/<int:foto_id>/remove", methods=["POST"])
+def remove_foto_route(foto_id: int):
+    foto = get_foto(foto_id)
+    if foto is None:
+        abort(404)
+    plant_id = foto["plant_id"]
+    remove_foto(foto_id)
+    try:
+        (FOTOS_DIR / foto["dateiname"]).unlink()
+    except OSError:
+        pass
+    return redirect(f"/plant/{plant_id}/edit")
+
+
+@app.route("/foto/<int:foto_id>/hauptbild", methods=["POST"])
+def set_hauptbild_route(foto_id: int):
+    foto = get_foto(foto_id)
+    if foto is None:
+        abort(404)
+    set_hauptbild(foto_id, foto["plant_id"])
+    return redirect(f"/plant/{foto['plant_id']}/edit")
+
+
+@app.route("/fotos/<path:dateiname>")
+def serve_foto(dateiname: str):
+    return send_from_directory(str(FOTOS_DIR), dateiname)
 
 
 @app.route("/plant/<int:plant_id>/beobachtung/add", methods=["POST"])

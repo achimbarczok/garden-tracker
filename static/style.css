@@ -480,6 +480,57 @@ summary:focus-visible {
   flex-wrap: wrap;
 }
 
+/* ── Foto-Galerie ───────────────────────────────────────────── */
+.foto-galerie {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.foto-item {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-align: center;
+  background: var(--white);
+}
+
+.foto-item img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+
+.foto-hauptbild {
+  border-color: #f0c040;
+  box-shadow: 0 0 0 2px rgba(240, 192, 64, .3);
+}
+
+.foto-stern {
+  display: block;
+  font-size: .7rem;
+  font-weight: 600;
+  color: #856404;
+  background: #fff3cd;
+  padding: .15rem .4rem;
+}
+
+.foto-bezeichnung {
+  display: block;
+  font-size: .75rem;
+  color: var(--text-muted);
+  padding: .2rem .4rem;
+}
+
+.foto-aktionen {
+  padding: .3rem;
+  display: flex;
+  gap: .3rem;
+  justify-content: center;
+}
+
 /* ── Mobile ─────────────────────────────────────────────────── */
 @media (max-width: 599px) {
   header { padding: .75rem 1rem; }
