@@ -19,7 +19,7 @@ from PIL import Image
 # ---------------------------------------------------------------------------
 
 VALID_LICHTBEDARF = ["Sonne", "Halbschatten", "Schatten"]
-VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung", "Gartenpflege"]
+VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Gehölze", "Blumen", "Gründüngung", "Gartenpflege"]
 
 plant_name_st = st.text(
     alphabet=st.characters(whitelist_categories=("L", "N", "Zs")),

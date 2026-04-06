@@ -33,7 +33,7 @@ VALID_LICHTBEDARF = {"Sonne", "Halbschatten", "Schatten"}
 VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat", "Pflege"}
 ZEITRAUM_EREIGNISTYPEN = {"Blüte", "Ernte"}
 VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
-VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung", "Gartenpflege"]
+VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Gehölze", "Blumen", "Gründüngung", "Gartenpflege"]
 VALID_DETAIL = {"", "Anfang", "Mitte", "Ende"}
 
 MAX_FOTO_SIZE = 10 * 1024 * 1024  # 10 MB

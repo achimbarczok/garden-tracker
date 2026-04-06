@@ -16,7 +16,7 @@ from hypothesis import strategies as st
 # ---------------------------------------------------------------------------
 
 VALID_LICHTBEDARF = ["Sonne", "Halbschatten", "Schatten"]
-VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung"]
+VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Gehölze", "Blumen", "Gründüngung"]
 VALID_LEBENSDAUER = ["Einjährig", "Zweijährig", "Mehrjährig"]
 
 plant_name_st = st.text(

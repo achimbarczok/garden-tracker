@@ -62,7 +62,7 @@ Dornenlose, starkwüchsige Sorte mit hohem Ertrag. Früchte mittelgroß, süß-s
     },
     {
         "name": "Apfel Boskoop",
-        "kategorie": "Bäume",
+        "kategorie": "Gehölze",
         "type": "Kernobst",
         "variety": "Boskoop",
         "lichtbedarf": "Sonne",
@@ -79,7 +79,7 @@ Alte, robuste Apfelsorte aus den Niederlanden (1856). Große, säuerliche Früch
     },
     {
         "name": "Forsythie",
-        "kategorie": "Sträucher",
+        "kategorie": "Gehölze",
         "type": "Zierstrauch",
         "variety": None,
         "lichtbedarf": "Sonne",

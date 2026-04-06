@@ -60,7 +60,7 @@ import os
 import tempfile
 
 VALID_LICHTBEDARF = ["Sonne", "Halbschatten", "Schatten"]
-VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung"]
+VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Gehölze", "Blumen", "Gründüngung"]
 VALID_LEBENSDAUER = ["Einjährig", "Zweijährig", "Mehrjährig"]
 VALID_EREIGNISTYPEN = ["Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"]
 

@@ -10,7 +10,7 @@ DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
 _DETAIL_OFFSETS = {"Anfang": 5, "Mitte": 15, "Ende": 25}
 
 # Current schema version — bump when adding migrations
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def berechne_sortierwert(monat: int, detail: str | None) -> int:
@@ -136,6 +136,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
                 ist_hauptbild INTEGER DEFAULT 0
             )
         """)
+
+    if current < 4:
+        # V4: Sträucher + Bäume → Gehölze
+        conn.execute("UPDATE plants SET kategorie = 'Gehölze' WHERE kategorie IN ('Sträucher', 'Bäume')")
 
     _set_schema_version(conn, SCHEMA_VERSION)
     conn.commit()
