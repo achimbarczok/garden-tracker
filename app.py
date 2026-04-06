@@ -7,7 +7,7 @@ from io import BytesIO
 from pathlib import Path
 
 from flask import Flask, abort, redirect, render_template, request, send_from_directory, url_for
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps
 
 from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 init_db, close_db, remove_ereignis, remove_plant, update_plant,
@@ -132,38 +132,64 @@ def _render_karte_error(error, kartenbild=None, positionen=None, plants=None):
     )
 
 
+def _process_image(file_storage, max_dimension: int) -> bytes:
+    """Process uploaded image: EXIF transpose, resize to max_dimension, convert to JPEG."""
+    img = Image.open(file_storage)
+    img = ImageOps.exif_transpose(img)
+    img = img.convert("RGB")
+    if max(img.size) > max_dimension:
+        img.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
 def process_image(file_storage) -> bytes:
-    """Process uploaded image: EXIF transpose, resize to max 640px, convert to JPEG."""
-    try:
-        img = Image.open(file_storage)
-        img = ImageOps.exif_transpose(img)
-        img = img.convert("RGB")
-        if max(img.size) > MAX_FOTO_DIMENSION:
-            img.thumbnail((MAX_FOTO_DIMENSION, MAX_FOTO_DIMENSION), Image.LANCZOS)
-        buf = BytesIO()
-        img.save(buf, format="JPEG", quality=85)
-        return buf.getvalue()
-    except UnidentifiedImageError:
-        raise
-    except Exception:
-        raise
+    """Process uploaded plant photo: EXIF transpose, resize to max 640px, JPEG."""
+    return _process_image(file_storage, MAX_FOTO_DIMENSION)
 
 
 def process_kartenbild(file_storage) -> bytes:
-    """Process uploaded garden map image: EXIF transpose, resize to max 1920px, convert to JPEG."""
+    """Process uploaded garden map image: EXIF transpose, resize to max 1920px, JPEG."""
+    return _process_image(file_storage, MAX_KARTE_DIMENSION)
+
+
+def _parse_plant_form():
+    """Parse and validate common plant form fields. Returns (data, error)."""
+    name = request.form.get("name", "").strip()
+    plant_type = request.form.get("type", "").strip() or None
+    kategorie = request.form.get("kategorie", "").strip()
+    variety = request.form.get("variety", "").strip() or None
+    lichtbedarf = request.form.get("lichtbedarf", "").strip()
+    kommentar = request.form.get("kommentar", "").strip() or None
+    lebensdauer = request.form.get("lebensdauer", "").strip() or None
     try:
-        img = Image.open(file_storage)
-        img = ImageOps.exif_transpose(img)
-        img = img.convert("RGB")
-        if max(img.size) > MAX_KARTE_DIMENSION:
-            img.thumbnail((MAX_KARTE_DIMENSION, MAX_KARTE_DIMENSION), Image.LANCZOS)
-        buf = BytesIO()
-        img.save(buf, format="JPEG", quality=85)
-        return buf.getvalue()
-    except UnidentifiedImageError:
-        raise
-    except Exception:
-        raise
+        pflanzmonat = int(request.form.get("pflanzmonat", "")) if request.form.get("pflanzmonat") else None
+        pflanzjahr = int(request.form.get("pflanzjahr", "")) if request.form.get("pflanzjahr") else None
+    except ValueError:
+        pflanzmonat = None
+        pflanzjahr = None
+
+    if not name:
+        return None, "Name darf nicht leer sein."
+    if kategorie not in VALID_KATEGORIEN:
+        return None, "Bitte eine gültige Kategorie wählen."
+    if lichtbedarf not in VALID_LICHTBEDARF:
+        return None, "Lichtbedarf muss Sonne, Halbschatten oder Schatten sein."
+
+    farbe_raw = request.form.get("farbe", "").strip()
+    farbe = farbe_raw if farbe_raw and farbe_raw != "#000000" else None
+
+    return {
+        "name": name, "type": plant_type or "", "variety": variety,
+        "lichtbedarf": lichtbedarf, "kommentar": kommentar,
+        "lebensdauer": lebensdauer, "pflanzmonat": pflanzmonat,
+        "pflanzjahr": pflanzjahr,
+        "anzahl": int(request.form.get("anzahl", 1) or 1),
+        "kategorie": kategorie,
+        "beschreibung": request.form.get("beschreibung", "").strip() or None,
+        "farbe": farbe,
+    }, None
 
 
 @app.route("/")
@@ -216,34 +242,14 @@ def index():
 
 @app.route("/add", methods=["POST"])
 def add():
-    name = request.form.get("name", "").strip()
-    plant_type = request.form.get("type", "").strip() or None
-    kategorie = request.form.get("kategorie", "").strip()
-    variety = request.form.get("variety", "").strip() or None
-    lichtbedarf = request.form.get("lichtbedarf", "").strip()
-    kommentar = request.form.get("kommentar", "").strip() or None
-    lebensdauer = request.form.get("lebensdauer", "").strip() or None
-    try:
-        pflanzmonat = int(request.form.get("pflanzmonat", "")) if request.form.get("pflanzmonat") else None
-        pflanzjahr = int(request.form.get("pflanzjahr", "")) if request.form.get("pflanzjahr") else None
-    except ValueError:
-        pflanzmonat = None
-        pflanzjahr = None
+    data, error = _parse_plant_form()
+    if error:
+        return _render_index_error(error)
 
-    if not name:
-        return _render_index_error("Name darf nicht leer sein.")
-    if kategorie not in VALID_KATEGORIEN:
-        return _render_index_error("Bitte eine gültige Kategorie wählen.")
-    if lichtbedarf not in VALID_LICHTBEDARF:
-        return _render_index_error("Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.")
-
-    # Farbe: nur übernehmen wenn explizit gesetzt (nicht den Default-Wert)
-    farbe_raw = request.form.get("farbe", "").strip()
-    farbe = farbe_raw if farbe_raw and farbe_raw != "#000000" else None
-
-    add_plant(name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
-              int(request.form.get("anzahl", 1) or 1), kategorie,
-              farbe=farbe)
+    add_plant(data["name"], data["type"], data["variety"], data["lichtbedarf"],
+              data["kommentar"], data["lebensdauer"], data["pflanzmonat"],
+              data["pflanzjahr"], data["anzahl"], data["kategorie"],
+              farbe=data["farbe"])
     return redirect(url_for("index"))
 
 
@@ -271,31 +277,14 @@ def edit_save(plant_id: int):
     if plant is None:
         abort(404)
 
-    name = request.form.get("name", "").strip()
-    plant_type = request.form.get("type", "").strip() or None
-    kategorie = request.form.get("kategorie", "").strip()
-    variety = request.form.get("variety", "").strip() or None
-    lichtbedarf = request.form.get("lichtbedarf", "").strip()
-    kommentar = request.form.get("kommentar", "").strip() or None
-    lebensdauer = request.form.get("lebensdauer", "").strip() or None
-    try:
-        pflanzmonat = int(request.form.get("pflanzmonat", "")) if request.form.get("pflanzmonat") else None
-        pflanzjahr = int(request.form.get("pflanzjahr", "")) if request.form.get("pflanzjahr") else None
-    except ValueError:
-        pflanzmonat = None
-        pflanzjahr = None
+    data, error = _parse_plant_form()
+    if error:
+        return _render_edit_error(plant, error)
 
-    if not name:
-        return _render_edit_error(plant, "Name darf nicht leer sein.")
-    if kategorie not in VALID_KATEGORIEN:
-        return _render_edit_error(plant, "Bitte eine gültige Kategorie wählen.")
-    if lichtbedarf not in VALID_LICHTBEDARF:
-        return _render_edit_error(plant, "Lichtbedarf muss Sonne, Halbschatten oder Schatten sein.")
-
-    update_plant(plant_id, name, plant_type or "", variety, lichtbedarf, kommentar, lebensdauer, pflanzmonat, pflanzjahr,
-                 int(request.form.get("anzahl", 1) or 1), kategorie,
-                 request.form.get("beschreibung", "").strip() or None,
-                 request.form.get("farbe", "").strip() or None)
+    update_plant(plant_id, data["name"], data["type"], data["variety"],
+                 data["lichtbedarf"], data["kommentar"], data["lebensdauer"],
+                 data["pflanzmonat"], data["pflanzjahr"], data["anzahl"],
+                 data["kategorie"], data["beschreibung"], data["farbe"])
     return redirect(url_for("index"))
 
 

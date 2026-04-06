@@ -10,7 +10,7 @@ DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
 _DETAIL_OFFSETS = {"Anfang": 5, "Mitte": 15, "Ende": 25}
 
 # Current schema version — bump when adding migrations
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def berechne_sortierwert(monat: int, detail: str | None) -> int:
@@ -157,6 +157,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
                 y        REAL    NOT NULL
             )
         """)
+
+    if current < 6:
+        # V6: Indizes auf Fremdschlüssel für bessere Query-Performance
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ereignisse_plant_id ON ereignisse(plant_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_beobachtungen_plant_id ON beobachtungen(plant_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_fotos_plant_id ON fotos(plant_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_kartenpositionen_plant_id ON kartenpositionen(plant_id)")
 
     _set_schema_version(conn, SCHEMA_VERSION)
     conn.commit()
