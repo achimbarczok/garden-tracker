@@ -320,10 +320,10 @@ def add_plant(name: str, type: str, variety: str | None,
         variety = None
     if kommentar == "":
         kommentar = None
-    if type == "":
-        type = None
     if beschreibung == "":
         beschreibung = None
+    if type is None:
+        type = ""
     with get_db() as conn:
         conn.execute(
             "INSERT INTO plants (name, type, variety, lichtbedarf, kommentar, "
@@ -423,10 +423,10 @@ def update_plant(plant_id: int, name: str, type: str, variety: str | None,
         variety = None
     if kommentar == "":
         kommentar = None
-    if type == "":
-        type = None
     if beschreibung == "":
         beschreibung = None
+    if type is None:
+        type = ""
     with get_db() as conn:
         conn.execute(
             "UPDATE plants SET name = ?, type = ?, variety = ?, "
