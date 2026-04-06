@@ -60,7 +60,7 @@
     <tbody>
     {% for b in beobachtungen %}
         <tr>
-            <td><a href="/plant/{{ b.plant_id }}/edit">{{ b.plant_name }}</a></td>
+            <td><a href="/plant/{{ b.plant_id }}/edit">{% if b.farbe %}<span class="color-dot" style="background:{{ b.farbe }}"></span>{% endif %}{{ b.plant_name }}</a></td>
             <td>{{ b.jahr }}</td>
             <td><span class="ereignis-tag" data-typ="{{ b.ereignistyp }}">{{ b.ereignistyp }}</span></td>
             <td>
@@ -90,5 +90,82 @@
     <p>Noch keine Tagebucheinträge vorhanden.</p>
 </div>
 {% endif %}
+
+<div class="card" style="margin-top:1.5rem">
+    <h3 style="margin-top:0">🗓️ Ereignis hinzufügen</h3>
+    {% if error %}
+    <div class="error-message">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/ereignis/add">
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Pflanze *</label>
+                <select name="plant_id" required>
+                    <option value="">-- Pflanze wählen --</option>
+                    {% for p in plants %}
+                    {% if p.aktiv %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Ereignistyp</label>
+                <select name="ereignistyp" id="beob-ereignistyp" onchange="toggleBisBeob(this)">
+                    {% for et in valid_ereignistypen %}
+                    <option value="{{ et }}">{{ et }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Wann</label>
+                <select name="start_detail">
+                    <option value="">–</option>
+                    <option value="Anfang">Anfang</option>
+                    <option value="Mitte">Mitte</option>
+                    <option value="Ende">Ende</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Monat</label>
+                <select name="startmonat">
+                    {% for num, name in german_months.items() %}
+                    <option value="{{ num }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field bis-fields-beob" style="display:none">
+                <label>Bis</label>
+                <select name="end_detail">
+                    <option value="">–</option>
+                    <option value="Anfang">Anfang</option>
+                    <option value="Mitte">Mitte</option>
+                    <option value="Ende">Ende</option>
+                </select>
+            </div>
+            <div class="form-field bis-fields-beob" style="display:none">
+                <label>Bis (Monat)</label>
+                <select name="endmonat">
+                    {% for num, name in german_months.items() %}
+                    <option value="{{ num }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Ereignis hinzufügen</button>
+        </div>
+    </form>
+</div>
+
+<script>
+var ZEITRAUM_TYPEN_BEOB = {{ zeitraum_ereignistypen | tojson }};
+function toggleBisBeob(sel) {
+    var show = ZEITRAUM_TYPEN_BEOB.includes(sel.value);
+    document.querySelectorAll('.bis-fields-beob').forEach(function(el) {
+        el.style.display = show ? '' : 'none';
+    });
+}
+</script>
 
 {% endblock %}

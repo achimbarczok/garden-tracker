@@ -58,7 +58,7 @@
     <tbody>
     {% for e in ereignisse %}
         <tr>
-            <td><a href="/plant/{{ e.plant_id }}/edit">{{ e.plant_name }}</a></td>
+            <td><a href="/plant/{{ e.plant_id }}/edit">{% if e.farbe %}<span class="color-dot" style="background:{{ e.farbe }}"></span>{% endif %}{{ e.plant_name }}</a></td>
             <td><span class="ereignis-tag" data-typ="{{ e.ereignistyp }}">{{ e.ereignistyp }}</span></td>
             <td>
                 {% if e.startmonat == e.endmonat and e.start_detail == e.end_detail %}

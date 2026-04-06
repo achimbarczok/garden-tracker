@@ -300,7 +300,7 @@ def get_all_beobachtungen() -> list[dict]:
     with get_db() as conn:
         rows = conn.execute(
             "SELECT b.id AS beobachtung_id, b.plant_id, p.name AS plant_name, "
-            "p.kategorie, b.jahr, b.ereignistyp, "
+            "p.kategorie, p.farbe, b.jahr, b.ereignistyp, "
             "b.startmonat, b.endmonat, b.start_detail, b.end_detail, b.notiz, "
             "(b.startmonat * 100 + CASE b.start_detail "
             "WHEN 'Anfang' THEN 5 WHEN 'Ende' THEN 25 ELSE 15 "
@@ -318,7 +318,7 @@ def get_all_ereignisse() -> list[dict]:
     with get_db() as conn:
         rows = conn.execute(
             "SELECT e.id AS ereignis_id, e.plant_id, p.name AS plant_name, "
-            "p.kategorie, e.ereignistyp, "
+            "p.kategorie, p.farbe, e.ereignistyp, "
             "e.startmonat, e.endmonat, e.start_detail, e.end_detail, "
             "(e.startmonat * 100 + CASE e.start_detail "
             "WHEN 'Anfang' THEN 5 WHEN 'Ende' THEN 25 ELSE 15 "

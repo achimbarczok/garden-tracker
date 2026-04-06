@@ -132,6 +132,28 @@ def _render_karte_error(error, kartenbild=None, positionen=None, plants=None):
     )
 
 
+def _render_beobachtungen_error(error: str):
+    """Render beobachtungen.html with an error message and HTTP 400."""
+    beobachtungen = get_all_beobachtungen()
+    plants = get_all_plants()
+    return (
+        render_template(
+            "beobachtungen.html",
+            beobachtungen=beobachtungen,
+            plants=plants,
+            german_months=GERMAN_MONTHS,
+            valid_kategorien=VALID_KATEGORIEN,
+            valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+            zeitraum_ereignistypen=sorted(ZEITRAUM_EREIGNISTYPEN),
+            filter_kategorie="",
+            filter_ereignis="",
+            filter_monat="",
+            error=error,
+        ),
+        400,
+    )
+
+
 def _process_image(file_storage, max_dimension: int) -> bytes:
     """Process uploaded image: EXIF transpose, resize to max_dimension, convert to JPEG."""
     img = Image.open(file_storage)
@@ -329,6 +351,63 @@ def add_ereignis_route(plant_id: int):
     add_ereignis(plant_id, ereignistyp, startmonat, endmonat,
                  start_detail, end_detail)
     return redirect(next_url)
+
+
+@app.route("/ereignis/add", methods=["POST"])
+def add_ereignis_from_beobachtungen():
+    # 1. Read and validate plant_id
+    plant_id_raw = request.form.get("plant_id", "").strip()
+    if not plant_id_raw:
+        return _render_beobachtungen_error("Bitte eine Pflanze auswählen.")
+
+    try:
+        plant_id = int(plant_id_raw)
+    except (ValueError, TypeError):
+        return _render_beobachtungen_error("Pflanze nicht gefunden.")
+
+    # 2. Look up plant, check exists and active
+    plant = get_plant(plant_id)
+    if plant is None or not plant.get("aktiv"):
+        return _render_beobachtungen_error("Pflanze nicht gefunden.")
+
+    # 3. Validate ereignistyp
+    ereignistyp = request.form.get("ereignistyp", "").strip()
+    if ereignistyp not in VALID_EREIGNISTYPEN:
+        return _render_beobachtungen_error("Ereignistyp ungültig.")
+
+    # 4. Validate startmonat
+    try:
+        startmonat = int(request.form.get("startmonat", ""))
+    except (ValueError, TypeError):
+        return _render_beobachtungen_error("Monat muss zwischen 1 und 12 liegen.")
+
+    if not (1 <= startmonat <= 12):
+        return _render_beobachtungen_error("Monat muss zwischen 1 und 12 liegen.")
+
+    start_detail = request.form.get("start_detail", "").strip() or None
+
+    # 5. Period vs non-period handling
+    if ereignistyp in ZEITRAUM_EREIGNISTYPEN:
+        try:
+            endmonat = int(request.form.get("endmonat", ""))
+        except (ValueError, TypeError):
+            return _render_beobachtungen_error("Monat muss zwischen 1 und 12 liegen.")
+
+        if not (1 <= endmonat <= 12):
+            return _render_beobachtungen_error("Monat muss zwischen 1 und 12 liegen.")
+
+        if startmonat > endmonat:
+            return _render_beobachtungen_error("Startmonat darf nicht größer als Endmonat sein.")
+
+        end_detail = request.form.get("end_detail", "").strip() or None
+    else:
+        endmonat = startmonat
+        end_detail = start_detail
+
+    # 6. Save and redirect
+    add_ereignis(plant_id, ereignistyp, startmonat, endmonat,
+                 start_detail, end_detail)
+    return redirect("/beobachtungen")
 
 
 @app.route("/ereignis/<int:ereignis_id>/remove", methods=["POST"])
@@ -579,11 +658,15 @@ def beobachtungen_page():
         if fm and 1 <= fm <= 12:
             beobachtungen = [b for b in beobachtungen if b["startmonat"] <= fm <= b["endmonat"]]
 
+    plants = get_all_plants()
+
     return render_template("beobachtungen.html",
                            beobachtungen=beobachtungen,
+                           plants=plants,
                            german_months=GERMAN_MONTHS,
                            valid_kategorien=VALID_KATEGORIEN,
                            valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                           zeitraum_ereignistypen=sorted(ZEITRAUM_EREIGNISTYPEN),
                            filter_kategorie=filter_kategorie,
                            filter_ereignis=filter_ereignis,
                            filter_monat=filter_monat)
