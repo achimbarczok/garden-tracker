@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - garden-data:/data
+    environment:
+      - DB_PATH=/data/plants.db
+      - PORT=5000
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - app
+
+volumes:
+  garden-data:

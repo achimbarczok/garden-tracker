@@ -30,6 +30,32 @@ docker build -t garden-tracker .
 
 ## Container starten
 
+### Option A: Docker Compose (empfohlen — mit `garten.local`)
+
+```bash
+docker compose up -d
+```
+
+Dann im Browser: `http://garten.local`
+
+Damit `garten.local` funktioniert, muss auf dem Raspberry Pi der Hostname gesetzt werden:
+
+```bash
+sudo hostnamectl set-hostname garten
+sudo systemctl restart avahi-daemon
+```
+
+Falls Avahi noch nicht installiert ist:
+
+```bash
+sudo apt install avahi-daemon
+sudo systemctl enable avahi-daemon
+```
+
+Danach ist der Pi im lokalen Netzwerk unter `garten.local` erreichbar — Caddy leitet Port 80 an die App weiter.
+
+### Option B: Nur Docker (ohne Reverse Proxy)
+
 ```bash
 docker run -d \
   -p 8080:5000 \
@@ -39,7 +65,7 @@ docker run -d \
   garden-tracker
 ```
 
-Dann im Browser öffnen: `http://<raspberry-pi-ip>:8080`
+Dann im Browser: `http://<raspberry-pi-ip>:8080`
 
 ## Pflanzen vorausfüllen
 
@@ -54,6 +80,12 @@ docker exec garden-tracker python seed_plants.py
 ```bash
 cd garden-tracker
 git pull
+docker compose up -d --build
+```
+
+Falls du Option B (ohne Compose) nutzt:
+
+```bash
 docker build -t garden-tracker .
 docker stop garden-tracker && docker rm garden-tracker
 docker run -d -p 8080:5000 -v garden-data:/data --name garden-tracker --restart unless-stopped garden-tracker
