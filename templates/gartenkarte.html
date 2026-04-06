@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>🗺️ Gartenkarte</h2>
+
+{% if error %}
+<div class="alert-error">{{ error }}</div>
+{% endif %}
+
+{% if kartenbild %}
+  {# Karten-Container mit relativem Positioning #}
+  <div class="karte-container">
+    <div class="karte-bild-wrap" id="karte-wrap">
+      <img src="/karte/{{ kartenbild.dateiname }}" alt="Gartenkarte" class="karte-bild" id="karte-bild">
+
+      {# Markierungen als absolute-positionierte Elemente #}
+      {% for pos in positionen %}
+      <div class="karte-marker"
+           style="left:{{ pos.x }}%;top:{{ pos.y }}%;{% if pos.farbe %}background:{{ pos.farbe }};{% endif %}"
+           title="{{ pos.name }}">
+        <form method="post" action="/gartenkarte/position/{{ pos.id }}/remove" class="marker-remove">
+          <button type="submit" class="marker-remove-btn" title="Entfernen">×</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Pflanze platzieren #}
+    <div class="karte-controls">
+      <form method="post" action="/gartenkarte/position/add" id="position-form">
+        <div class="form-inline-row">
+          <select name="plant_id" required>
+            <option value="">Pflanze wählen…</option>
+            {% for p in plants %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+          <input type="hidden" name="x" id="karte-x">
+          <input type="hidden" name="y" id="karte-y">
+          <span class="karte-hint" id="karte-hint">Pflanze wählen, dann auf die Karte klicken.</span>
+        </div>
+      </form>
+    </div>
+
+    {# Kartenbild ersetzen / löschen #}
+    <div class="karte-actions">
+      <form method="post" action="/gartenkarte/bild/upload" enctype="multipart/form-data" class="form-inline-row">
+        <input type="file" name="bild" accept="image/jpeg,image/png" required>
+        <button type="submit" class="btn btn-outline btn-sm">🔄 Bild ersetzen</button>
+      </form>
+      <form method="post" action="/gartenkarte/bild/remove" style="display:inline">
+        <button type="submit" class="btn btn-danger btn-sm"
+                onclick="return confirm('Kartenbild und alle Positionen wirklich löschen?')">🗑️ Bild löschen</button>
+      </form>
+    </div>
+  </div>
+
+  {# Minimales Inline-JS für Klick-Koordinaten #}
+  <script>
+  (function(){
+    var wrap = document.getElementById('karte-wrap');
+    var img = document.getElementById('karte-bild');
+    var form = document.getElementById('position-form');
+    var xInput = document.getElementById('karte-x');
+    var yInput = document.getElementById('karte-y');
+    var hint = document.getElementById('karte-hint');
+    wrap.addEventListener('click', function(e){
+      if(e.target.closest('.marker-remove')) return;
+      var rect = img.getBoundingClientRect();
+      var x = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
+      var y = ((e.clientY - rect.top) / rect.height * 100).toFixed(2);
+      if(x < 0 || x > 100 || y < 0 || y > 100) return;
+      xInput.value = x;
+      yInput.value = y;
+      if(form.querySelector('select').value){
+        form.submit();
+      } else {
+        hint.textContent = 'Bitte zuerst eine Pflanze wählen.';
+      }
+    });
+  })();
+  </script>
+
+{% else %}
+  {# Kein Kartenbild — Upload-Formular #}
+  <div class="card">
+    <div class="empty-state">
+      <div class="icon">🗺️</div>
+      <p>Noch kein Kartenbild vorhanden.</p>
+      <p style="color:var(--text-muted);font-size:.85rem;margin-top:.5rem">
+        Lade ein Foto oder eine Skizze deines Gartens hoch.
+      </p>
+    </div>
+    <form method="post" action="/gartenkarte/bild/upload" enctype="multipart/form-data">
+      <div class="form-inline-row" style="justify-content:center;margin-top:1rem">
+        <input type="file" name="bild" accept="image/jpeg,image/png" required>
+        <button type="submit" class="btn btn-primary">📷 Kartenbild hochladen</button>
+      </div>
+    </form>
+  </div>
+{% endif %}
+
+{% endblock %}

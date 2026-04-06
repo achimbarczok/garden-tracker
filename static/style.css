@@ -540,6 +540,82 @@ summary:focus-visible {
   justify-content: center;
 }
 
+/* ── Gartenkarte ────────────────────────────────────────────── */
+.karte-container {
+  margin-bottom: 2rem;
+}
+
+.karte-bild-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  cursor: crosshair;
+}
+
+.karte-bild {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+}
+
+.karte-marker {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--green-mid);
+  border: 2px solid var(--white);
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.karte-marker:hover .marker-remove {
+  display: block;
+}
+
+.marker-remove {
+  display: none;
+  position: absolute;
+  top: -8px;
+  right: -8px;
+}
+
+.marker-remove-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--danger);
+  color: var(--white);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.karte-controls {
+  margin-top: 1rem;
+}
+
+.karte-hint {
+  font-size: .85rem;
+  color: var(--text-muted);
+}
+
+.karte-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: .75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 /* ── Mobile ─────────────────────────────────────────────────── */
 @media (max-width: 599px) {
   header { padding: .75rem 1rem; }
@@ -600,4 +676,15 @@ summary:focus-visible {
   h2 { margin: 1.25rem 0 .5rem; }
 
   .page-wrap { padding: 0 .5rem 2rem; }
+
+  .karte-marker {
+    width: 16px;
+    height: 16px;
+  }
+
+  .karte-controls,
+  .karte-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

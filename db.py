@@ -10,7 +10,7 @@ DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
 _DETAIL_OFFSETS = {"Anfang": 5, "Mitte": 15, "Ende": 25}
 
 # Current schema version — bump when adding migrations
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def berechne_sortierwert(monat: int, detail: str | None) -> int:
@@ -140,6 +140,23 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if current < 4:
         # V4: Sträucher + Bäume → Gehölze
         conn.execute("UPDATE plants SET kategorie = 'Gehölze' WHERE kategorie IN ('Sträucher', 'Bäume')")
+
+    if current < 5:
+        # V5: Gartenkarte — Kartenbild und Kartenpositionen
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS kartenbild (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                dateiname TEXT    NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS kartenpositionen (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id INTEGER NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+                x        REAL    NOT NULL,
+                y        REAL    NOT NULL
+            )
+        """)
 
     _set_schema_version(conn, SCHEMA_VERSION)
     conn.commit()
@@ -571,6 +588,63 @@ def get_fotos_by_plant_id(plant_id: int) -> list[str]:
             (plant_id,),
         ).fetchall()
     return [r[0] for r in rows]
+
+
+def get_kartenbild() -> dict | None:
+    """Get the single garden map image entry, or None."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, dateiname FROM kartenbild LIMIT 1"
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def save_kartenbild(dateiname: str) -> None:
+    """Replace the garden map image (max 1 row)."""
+    with get_db() as conn:
+        conn.execute("DELETE FROM kartenbild")
+        conn.execute(
+            "INSERT INTO kartenbild (dateiname) VALUES (?)",
+            (dateiname,),
+        )
+        conn.commit()
+
+
+def remove_kartenbild() -> None:
+    """Delete the garden map image and all positions (atomic)."""
+    with get_db() as conn:
+        conn.execute("DELETE FROM kartenpositionen")
+        conn.execute("DELETE FROM kartenbild")
+        conn.commit()
+
+
+def get_kartenpositionen() -> list[dict]:
+    """Get all map positions with plant name and color."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT kp.id, kp.plant_id, kp.x, kp.y, p.name, p.farbe "
+            "FROM kartenpositionen kp "
+            "JOIN plants p ON kp.plant_id = p.id "
+            "ORDER BY kp.id"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_kartenposition(plant_id: int, x: float, y: float) -> None:
+    """Add a plant position on the garden map."""
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO kartenpositionen (plant_id, x, y) VALUES (?, ?, ?)",
+            (plant_id, x, y),
+        )
+        conn.commit()
+
+
+def remove_kartenposition(position_id: int) -> None:
+    """Remove a single map position."""
+    with get_db() as conn:
+        conn.execute("DELETE FROM kartenpositionen WHERE id = ?", (position_id,))
+        conn.commit()
 
 
 PHAENOLOGISCHE_PHASEN = [

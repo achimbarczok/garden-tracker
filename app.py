@@ -19,6 +19,8 @@ from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 get_all_beobachtungen, get_all_ereignisse, berechne_sortierwert,
                 add_foto, get_foto, remove_foto, set_hauptbild, count_fotos,
                 get_fotos_by_plant_id,
+                get_kartenbild, save_kartenbild, remove_kartenbild,
+                get_kartenpositionen, add_kartenposition, remove_kartenposition,
                 PHAENOLOGISCHE_PHASEN, PHASEN_ICONS)
 
 PORT = int(os.environ.get("PORT", 5000))
@@ -42,6 +44,9 @@ MAX_FOTO_DIMENSION = 640
 FOTOS_DIR = Path(os.environ.get("DB_PATH", "/data/plants.db")).parent / "fotos"
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}
 
+MAX_KARTE_DIMENSION = 1920
+KARTE_DIR = Path(os.environ.get("DB_PATH", "/data/plants.db")).parent / "karte"
+
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_FOTO_SIZE
 app.teardown_appcontext(close_db)
@@ -53,6 +58,7 @@ except Exception as e:
     sys.exit(1)
 
 os.makedirs(FOTOS_DIR, exist_ok=True)
+os.makedirs(KARTE_DIR, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +70,8 @@ def _safe_next(next_url: str) -> str:
     if next_url and (next_url == "/" or next_url.startswith("/plant/")
                     or next_url.startswith("/phaenologie")
                     or next_url.startswith("/beobachtungen")
-                    or next_url.startswith("/ereignisse")):
+                    or next_url.startswith("/ereignisse")
+                    or next_url.startswith("/gartenkarte")):
         return next_url
     return url_for("index")
 
@@ -110,6 +117,21 @@ def _render_edit_error(plant: dict, error: str):
     )
 
 
+def _render_karte_error(error, kartenbild=None, positionen=None, plants=None):
+    """Render gartenkarte.html with an error message and HTTP 400."""
+    if kartenbild is None:
+        kartenbild = get_kartenbild()
+    if positionen is None:
+        positionen = get_kartenpositionen()
+    if plants is None:
+        plants = get_all_plants()
+    return (
+        render_template("gartenkarte.html", error=error,
+                        kartenbild=kartenbild, positionen=positionen, plants=plants),
+        400,
+    )
+
+
 def process_image(file_storage) -> bytes:
     """Process uploaded image: EXIF transpose, resize to max 640px, convert to JPEG."""
     try:
@@ -118,6 +140,23 @@ def process_image(file_storage) -> bytes:
         img = img.convert("RGB")
         if max(img.size) > MAX_FOTO_DIMENSION:
             img.thumbnail((MAX_FOTO_DIMENSION, MAX_FOTO_DIMENSION), Image.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        return buf.getvalue()
+    except UnidentifiedImageError:
+        raise
+    except Exception:
+        raise
+
+
+def process_kartenbild(file_storage) -> bytes:
+    """Process uploaded garden map image: EXIF transpose, resize to max 1920px, convert to JPEG."""
+    try:
+        img = Image.open(file_storage)
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGB")
+        if max(img.size) > MAX_KARTE_DIMENSION:
+            img.thumbnail((MAX_KARTE_DIMENSION, MAX_KARTE_DIMENSION), Image.LANCZOS)
         buf = BytesIO()
         img.save(buf, format="JPEG", quality=85)
         return buf.getvalue()
@@ -635,3 +674,97 @@ def phaenologie_remove(phaenologie_id: int):
     jahr = request.form.get("jahr", str(date.today().year))
     remove_phaenologie(phaenologie_id)
     return redirect(url_for("phaenologie_page", jahr=jahr))
+
+
+@app.route("/gartenkarte")
+def gartenkarte_page():
+    kartenbild = get_kartenbild()
+    positionen = get_kartenpositionen()
+    plants = get_all_plants()
+    return render_template("gartenkarte.html", kartenbild=kartenbild,
+                           positionen=positionen, plants=plants)
+
+
+@app.route("/gartenkarte/bild/upload", methods=["POST"])
+def upload_kartenbild():
+    bild = request.files.get("bild")
+    if not bild or bild.filename == "":
+        return _render_karte_error("Bitte eine Bilddatei auswählen.")
+
+    if bild.content_type not in ALLOWED_MIME_TYPES:
+        return _render_karte_error("Nur JPEG- und PNG-Dateien sind erlaubt.")
+
+    try:
+        data = process_kartenbild(bild)
+    except Exception:
+        return _render_karte_error("Das Bild konnte nicht verarbeitet werden.")
+
+    # Delete old image file if exists
+    old = get_kartenbild()
+    if old:
+        try:
+            (KARTE_DIR / old["dateiname"]).unlink()
+        except OSError:
+            pass
+
+    dateiname = f"{uuid.uuid4()}.jpg"
+    filepath = KARTE_DIR / dateiname
+
+    try:
+        filepath.write_bytes(data)
+    except OSError:
+        return _render_karte_error("Fehler beim Speichern der Datei.")
+
+    save_kartenbild(dateiname)
+    return redirect("/gartenkarte")
+
+
+@app.route("/gartenkarte/bild/remove", methods=["POST"])
+def remove_kartenbild_route():
+    old = get_kartenbild()
+    if not old:
+        return redirect("/gartenkarte")
+    remove_kartenbild()
+    try:
+        (KARTE_DIR / old["dateiname"]).unlink()
+    except OSError:
+        pass
+    return redirect("/gartenkarte")
+
+
+@app.route("/gartenkarte/position/add", methods=["POST"])
+def add_position_route():
+    if not get_kartenbild():
+        return _render_karte_error("Bitte zuerst ein Kartenbild hochladen.")
+
+    try:
+        plant_id = int(request.form.get("plant_id", ""))
+    except (ValueError, TypeError):
+        abort(404)
+
+    plant = get_plant(plant_id)
+    if plant is None:
+        abort(404)
+
+    try:
+        x = float(request.form.get("x", ""))
+        y = float(request.form.get("y", ""))
+    except (ValueError, TypeError):
+        return _render_karte_error("Ungültige Koordinaten.")
+
+    if not (0.0 <= x <= 100.0) or not (0.0 <= y <= 100.0):
+        return _render_karte_error("Ungültige Koordinaten.")
+
+    add_kartenposition(plant_id, x, y)
+    return redirect("/gartenkarte")
+
+
+@app.route("/gartenkarte/position/<int:position_id>/remove", methods=["POST"])
+def remove_position_route(position_id):
+    remove_kartenposition(position_id)
+    return redirect("/gartenkarte")
+
+
+@app.route("/karte/<path:dateiname>")
+def serve_kartenbild(dateiname):
+    return send_from_directory(str(KARTE_DIR), dateiname)

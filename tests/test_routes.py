@@ -266,3 +266,361 @@ def test_keine_treffer_ereignisse(client):
     html = response.data.decode("utf-8")
     assert "Keine Einträge gefunden." in html
     assert "Filter zurücksetzen" in html
+
+
+# ---------------------------------------------------------------------------
+# Example-based tests for gartenkarte feature (Tasks 8.1–8.15)
+# ---------------------------------------------------------------------------
+
+import pathlib
+import sqlite3
+
+
+def _make_jpeg_bytes(width=100, height=100):
+    """Create minimal JPEG bytes for testing."""
+    from io import BytesIO
+    from PIL import Image
+    img = Image.new("RGB", (width, height), (100, 150, 200))
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
+def _upload_kartenbild(client):
+    """Upload a test kartenbild and return the response."""
+    from io import BytesIO
+    img_bytes = _make_jpeg_bytes()
+    return client.post(
+        "/gartenkarte/bild/upload",
+        data={"bild": (BytesIO(img_bytes), "test.jpg", "image/jpeg")},
+        content_type="multipart/form-data",
+    )
+
+
+def test_karte_migration_creates_tables(tmp_path, monkeypatch):
+    """8.1: After init_db(), kartenbild and kartenpositionen exist with correct columns.
+
+    Requirements: 7.1, 7.2, 7.4
+    """
+    db_file = str(tmp_path / "migrate_karte.db")
+    monkeypatch.setenv("DB_PATH", db_file)
+
+    import db as db_mod
+    importlib.reload(db_mod)
+    db_mod.init_db()
+
+    conn = sqlite3.connect(db_file)
+    # Check kartenbild columns
+    kb_cols = {row[1] for row in conn.execute("PRAGMA table_info(kartenbild)")}
+    assert "id" in kb_cols
+    assert "dateiname" in kb_cols
+
+    # Check kartenpositionen columns
+    kp_cols = {row[1] for row in conn.execute("PRAGMA table_info(kartenpositionen)")}
+    assert "id" in kp_cols
+    assert "plant_id" in kp_cols
+    assert "x" in kp_cols
+    assert "y" in kp_cols
+    conn.close()
+
+
+def test_karte_upload_form_when_no_image(client):
+    """8.2: GET /gartenkarte without kartenbild → HTML contains upload form.
+
+    Requirements: 1.1
+    """
+    response = client.get("/gartenkarte")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert 'enctype="multipart/form-data"' in html
+
+
+def test_karte_upload_no_file_error(client):
+    """8.3: POST /gartenkarte/bild/upload without file → error message.
+
+    Requirements: 1.6
+    """
+    response = client.post("/gartenkarte/bild/upload",
+                           data={},
+                           content_type="multipart/form-data")
+    assert response.status_code == 400
+    html = response.data.decode("utf-8")
+    assert "Bitte eine Bilddatei auswählen." in html
+
+
+def test_karte_exif_rotation(tmp_path, monkeypatch):
+    """8.4: EXIF orientation tag 6 (90° CW) → dimensions transposed after processing.
+
+    Requirements: 2.4
+    """
+    from io import BytesIO
+    from PIL import Image
+    import struct
+
+    db_file = str(tmp_path / "exif_test.db")
+    monkeypatch.setenv("DB_PATH", db_file)
+
+    import db as db_mod
+    importlib.reload(db_mod)
+    db_mod.init_db()
+
+    import app as app_module
+    importlib.reload(app_module)
+
+    # Create a 100x200 image with EXIF orientation 6 (rotated 90° CW)
+    # Build minimal EXIF with orientation tag = 6
+    # EXIF structure: APP1 marker with TIFF header and IFD0 containing orientation
+    def _make_exif_orientation(orientation):
+        """Build minimal EXIF bytes with given orientation value."""
+        # TIFF header (little-endian)
+        tiff_header = b"II"  # little-endian
+        tiff_header += struct.pack("<H", 42)  # magic
+        tiff_header += struct.pack("<I", 8)   # offset to IFD0
+
+        # IFD0 with one entry: Orientation (tag 0x0112)
+        ifd = struct.pack("<H", 1)  # number of entries
+        ifd += struct.pack("<HHI", 0x0112, 3, 1)  # tag, SHORT type, count
+        ifd += struct.pack("<HH", orientation, 0)   # value (padded to 4 bytes)
+        ifd += struct.pack("<I", 0)  # next IFD offset (none)
+
+        tiff_data = tiff_header + ifd
+        # Exif header: "Exif\x00\x00" + TIFF data
+        exif_payload = b"Exif\x00\x00" + tiff_data
+        return exif_payload
+
+    img = Image.new("RGB", (100, 200), (50, 100, 150))
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    jpeg_bytes = buf.getvalue()
+
+    # Inject EXIF APP1 segment right after SOI marker
+    exif_payload = _make_exif_orientation(6)
+    app1_marker = b"\xff\xe1"
+    app1_length = struct.pack(">H", len(exif_payload) + 2)
+    exif_segment = app1_marker + app1_length + exif_payload
+
+    # JPEG starts with FFD8; insert EXIF right after
+    modified_jpeg = jpeg_bytes[:2] + exif_segment + jpeg_bytes[2:]
+
+    input_buf = BytesIO(modified_jpeg)
+    result_bytes = app_module.process_kartenbild(input_buf)
+
+    result_img = Image.open(BytesIO(result_bytes))
+    # After transposing orientation 6 on a 100x200 image → 200x100
+    assert result_img.size == (200, 100)
+
+
+def test_karte_replace_button_present(client, tmp_path, monkeypatch):
+    """8.5: Upload kartenbild, then GET /gartenkarte → HTML contains 'Bild ersetzen'.
+
+    Requirements: 3.1
+    """
+    import app as app_module
+    app_module.KARTE_DIR = pathlib.Path(tmp_path) / "karte"
+    os.makedirs(app_module.KARTE_DIR, exist_ok=True)
+
+    _upload_kartenbild(client)
+    response = client.get("/gartenkarte")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Bild ersetzen" in html
+
+
+def test_karte_delete_button_present(client, tmp_path, monkeypatch):
+    """8.6: Upload kartenbild, then GET /gartenkarte → HTML contains 'Bild löschen'.
+
+    Requirements: 3.3
+    """
+    import app as app_module
+    app_module.KARTE_DIR = pathlib.Path(tmp_path) / "karte"
+    os.makedirs(app_module.KARTE_DIR, exist_ok=True)
+
+    _upload_kartenbild(client)
+    response = client.get("/gartenkarte")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Bild löschen" in html
+
+
+def test_karte_dropdown_shows_active_plants(client, tmp_path, monkeypatch):
+    """8.7: Add a plant, upload kartenbild, GET /gartenkarte → dropdown with plant name.
+
+    Requirements: 4.1
+    """
+    import app as app_module
+    app_module.KARTE_DIR = pathlib.Path(tmp_path) / "karte"
+    os.makedirs(app_module.KARTE_DIR, exist_ok=True)
+
+    # Add a plant first
+    client.post("/add", data={
+        "name": "Kartoffel",
+        "type": "Gemüse",
+        "variety": "",
+        "kategorie": "Gemüse",
+        "lichtbedarf": "Sonne",
+    })
+
+    _upload_kartenbild(client)
+    response = client.get("/gartenkarte")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Kartoffel" in html
+    assert "<select" in html
+
+
+def test_karte_nonexistent_plant_404(client, tmp_path, monkeypatch):
+    """8.8: POST /gartenkarte/position/add with plant_id=99999 → HTTP 404.
+
+    Requirements: 4.5
+    """
+    import app as app_module
+    app_module.KARTE_DIR = pathlib.Path(tmp_path) / "karte"
+    os.makedirs(app_module.KARTE_DIR, exist_ok=True)
+
+    _upload_kartenbild(client)
+    response = client.post("/gartenkarte/position/add", data={
+        "plant_id": "99999",
+        "x": "50.0",
+        "y": "50.0",
+    })
+    assert response.status_code == 404
+
+
+def test_karte_remove_button_per_marker(client, tmp_path, monkeypatch):
+    """8.9: Upload kartenbild, add plant + position, GET → marker-remove-btn present.
+
+    Requirements: 6.1
+    """
+    import app as app_module
+    app_module.KARTE_DIR = pathlib.Path(tmp_path) / "karte"
+    os.makedirs(app_module.KARTE_DIR, exist_ok=True)
+
+    # Add a plant
+    client.post("/add", data={
+        "name": "Tomate",
+        "type": "Gemüse",
+        "variety": "",
+        "kategorie": "Gemüse",
+        "lichtbedarf": "Sonne",
+    })
+
+    _upload_kartenbild(client)
+
+    # Get plant id
+    import db as db_mod
+    plants = db_mod.get_all_plants()
+    plant_id = plants[0]["id"]
+
+    # Add a position
+    client.post("/gartenkarte/position/add", data={
+        "plant_id": str(plant_id),
+        "x": "25.0",
+        "y": "75.0",
+    })
+
+    response = client.get("/gartenkarte")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "marker-remove-btn" in html
+
+
+def test_karte_nav_link_present(client):
+    """8.10: GET / → HTML contains href="/gartenkarte" and "🗺️ Karte".
+
+    Requirements: 9.1
+    """
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert 'href="/gartenkarte"' in html
+    assert "Karte" in html
+
+
+def test_karte_nav_link_active(client):
+    """8.11: GET /gartenkarte → HTML contains nav-active on the Karte link.
+
+    Requirements: 9.3
+    """
+    response = client.get("/gartenkarte")
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "nav-active" in html
+
+
+def test_karte_position_without_kartenbild_error(client):
+    """8.12: POST /gartenkarte/position/add without kartenbild → error message.
+
+    Requirements: 11.4
+    """
+    response = client.post("/gartenkarte/position/add", data={
+        "plant_id": "1",
+        "x": "50.0",
+        "y": "50.0",
+    })
+    assert response.status_code == 400
+    html = response.data.decode("utf-8")
+    assert "Bitte zuerst ein Kartenbild hochladen." in html
+
+
+def test_karte_corrupt_image_error(client):
+    """8.13: POST with corrupted file data → error message.
+
+    Requirements: 11.2
+    """
+    from io import BytesIO
+    response = client.post(
+        "/gartenkarte/bild/upload",
+        data={"bild": (BytesIO(b"not-an-image-at-all"), "bad.jpg", "image/jpeg")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 400
+    html = response.data.decode("utf-8")
+    assert "Das Bild konnte nicht verarbeitet werden." in html
+
+
+def test_karte_serve_kartenbild(client, tmp_path, monkeypatch):
+    """8.14: Upload kartenbild, then GET /karte/<dateiname> → status 200.
+
+    Requirements: 8.1
+    """
+    import app as app_module
+    app_module.KARTE_DIR = pathlib.Path(tmp_path) / "karte"
+    os.makedirs(app_module.KARTE_DIR, exist_ok=True)
+
+    _upload_kartenbild(client)
+
+    import db as db_mod
+    kb = db_mod.get_kartenbild()
+    assert kb is not None
+
+    response = client.get(f"/karte/{kb['dateiname']}")
+    assert response.status_code == 200
+
+
+def test_karte_filesystem_error_no_partial_db(client, tmp_path, monkeypatch):
+    """8.15: Mock write_bytes to raise OSError → no DB entry in kartenbild.
+
+    Requirements: 11.1
+    """
+    from io import BytesIO
+    from unittest.mock import patch
+    import app as app_module
+    app_module.KARTE_DIR = pathlib.Path(tmp_path) / "karte"
+    os.makedirs(app_module.KARTE_DIR, exist_ok=True)
+
+    img_bytes = _make_jpeg_bytes()
+
+    with patch.object(pathlib.Path, "write_bytes", side_effect=OSError("disk full")):
+        response = client.post(
+            "/gartenkarte/bild/upload",
+            data={"bild": (BytesIO(img_bytes), "test.jpg", "image/jpeg")},
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 400
+    html = response.data.decode("utf-8")
+    assert "Fehler beim Speichern der Datei." in html
+
+    import db as db_mod
+    kb = db_mod.get_kartenbild()
+    assert kb is None
