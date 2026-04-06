@@ -24,10 +24,10 @@ GERMAN_MONTHS = {
 }
 
 VALID_LICHTBEDARF = {"Sonne", "Halbschatten", "Schatten"}
-VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat"}
+VALID_EREIGNISTYPEN = {"Blüte", "Ernte", "Düngen", "Rückschnitt", "Vorkultur", "Auspflanzen", "Direktsaat", "Pflege"}
 ZEITRAUM_EREIGNISTYPEN = {"Blüte", "Ernte"}
 VALID_LEBENSDAUER = {"Einjährig", "Zweijährig", "Mehrjährig"}
-VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung"]
+VALID_KATEGORIEN = ["Obst", "Gemüse", "Kräuter", "Stauden", "Sträucher", "Bäume", "Blumen", "Gründüngung", "Gartenpflege"]
 VALID_DETAIL = {"", "Anfang", "Mitte", "Ende"}
 
 app = Flask(__name__)
