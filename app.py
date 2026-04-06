@@ -756,7 +756,7 @@ def add_position_route():
         return _render_karte_error("Ungültige Koordinaten.")
 
     add_kartenposition(plant_id, x, y)
-    return redirect("/gartenkarte")
+    return redirect(f"/gartenkarte?plant_id={plant_id}")
 
 
 @app.route("/gartenkarte/position/<int:position_id>/remove", methods=["POST"])

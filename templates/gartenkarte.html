@@ -31,12 +31,12 @@
           <select name="plant_id" required>
             <option value="">Pflanze wählen…</option>
             {% for p in plants %}
-            <option value="{{ p.id }}">{{ p.name }}</option>
+            <option value="{{ p.id }}"{% if request.args.get('plant_id') == p.id|string %} selected{% endif %}>{{ p.name }}</option>
             {% endfor %}
           </select>
           <input type="hidden" name="x" id="karte-x">
           <input type="hidden" name="y" id="karte-y">
-          <span class="karte-hint" id="karte-hint">Pflanze wählen, dann auf die Karte klicken.</span>
+          <span class="karte-hint" id="karte-hint">{% if request.args.get('plant_id') %}Auf die Karte klicken, um die Pflanze zu platzieren.{% else %}Pflanze wählen, dann auf die Karte klicken.{% endif %}</span>
         </div>
       </form>
     </div>
