@@ -11,7 +11,8 @@ Eine persönliche Web-App zur Verwaltung von Gartenpflanzen mit Ereigniskalender
 - **Phänologischer Kalender** — 10 Jahreszeiten pro Jahr erfassen, aktuelle Phase auf der Startseite
 - **Pflanze duplizieren** — Satz-Kopie mit allen Stammdaten und Ereignissen
 - **Pflanzen deaktivieren** — Inaktiv setzen statt löschen, Daten bleiben erhalten, über Filter wieder einblendbar
-- **Filter** — Kategorie, Ereignistyp und Monat auf allen Listen
+- **Filter** — Kategorie, Ereignistyp und Monat auf allen Listen und der Gartenkarte
+- **Gartenkarte** — Kartenbild hochladen, Pflanzen per Klick platzieren, kategoriespezifische Markierungen (Gehölze groß+rund, Gartenpflege groß+eckig), Hervorhebung der ausgewählten Pflanze, nur aktive Pflanzen sichtbar
 - **Responsives Design** — Desktop und Smartphone
 - **Komplett auf Deutsch**
 

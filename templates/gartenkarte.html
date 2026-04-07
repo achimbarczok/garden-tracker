@@ -7,6 +7,44 @@
 {% endif %}
 
 {% if kartenbild %}
+  {# Filter-Leiste #}
+  <div class="card" style="margin-bottom:1rem">
+    <form method="get" action="/gartenkarte" class="filter-bar">
+      <div class="form-field">
+        <label style="font-size:.75rem">Kategorie</label>
+        <select name="kategorie" onchange="this.form.submit()">
+          <option value="">Alle Kategorien</option>
+          {% for k in valid_kategorien %}
+          <option value="{{ k }}" {% if filter_kategorie == k %}selected{% endif %}>{{ k }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label style="font-size:.75rem">Ereignistyp</label>
+        <select name="ereignis" onchange="this.form.submit()">
+          <option value="">Alle Ereignisse</option>
+          {% for et in valid_ereignistypen %}
+          <option value="{{ et }}" {% if filter_ereignis == et %}selected{% endif %}>{{ et }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label style="font-size:.75rem">Im Monat</label>
+        <select name="monat" onchange="this.form.submit()">
+          <option value="">Alle Monate</option>
+          {% for num, name in german_months.items() %}
+          <option value="{{ num }}" {% if filter_monat == num|string %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if filter_kategorie or filter_ereignis or filter_monat %}
+      <div class="form-field" style="align-self:flex-end">
+        <a href="/gartenkarte" class="btn btn-ghost btn-sm">✕ Filter zurücksetzen</a>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
   {# Karten-Container mit relativem Positioning #}
   <div class="karte-container">
     <div class="karte-bild-wrap" id="karte-wrap">
@@ -14,8 +52,9 @@
 
       {# Markierungen als absolute-positionierte Elemente #}
       {% for pos in positionen %}
-      <div class="karte-marker"
+      <div class="karte-marker{% if pos.kategorie == 'Gehölze' %} karte-marker-gehoelz{% endif %}{% if pos.kategorie == 'Gartenpflege' %} karte-marker-gartenpflege{% endif %}"
            style="left:{{ pos.x }}%;top:{{ pos.y }}%;{% if pos.farbe %}background:{{ pos.farbe }};{% endif %}"
+           data-plant-id="{{ pos.plant_id }}"
            title="{{ pos.name }}">
         <form method="post" action="/gartenkarte/position/{{ pos.id }}/remove" class="marker-remove">
           <button type="submit" class="marker-remove-btn" title="Entfernen">×</button>
@@ -63,6 +102,7 @@
     var xInput = document.getElementById('karte-x');
     var yInput = document.getElementById('karte-y');
     var hint = document.getElementById('karte-hint');
+    var sel = form.querySelector('select');
     wrap.addEventListener('click', function(e){
       if(e.target.closest('.marker-remove')) return;
       var rect = img.getBoundingClientRect();
@@ -71,11 +111,17 @@
       if(x < 0 || x > 100 || y < 0 || y > 100) return;
       xInput.value = x;
       yInput.value = y;
-      if(form.querySelector('select').value){
+      if(sel.value){
         form.submit();
       } else {
         hint.textContent = 'Bitte zuerst eine Pflanze wählen.';
       }
+    });
+    sel.addEventListener('change', function(){
+      var pid = sel.value;
+      document.querySelectorAll('.karte-marker').forEach(function(m){
+        m.style.opacity = (!pid || m.dataset.plantId == pid) ? '1' : '0.5';
+      });
     });
   })();
   </script>

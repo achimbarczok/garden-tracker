@@ -15,7 +15,7 @@
 │   ├── beobachtungen.html # Chronological observation list with filters
 │   ├── ereignisse.html # Chronological event list with filters
 │   ├── phaenologie.html # Phenological calendar page
-│   └── gartenkarte.html # Garden map — image upload, click-to-place markers, inline JS
+│   └── gartenkarte.html # Garden map — image upload, click-to-place markers, filter bar, category-specific markers, plant highlighting
 ├── static/
 │   └── style.css       # All styles (CSS custom properties, responsive, garden map)
 └── tests/
@@ -25,7 +25,8 @@
     ├── test_chronologische_listen_properties.py # PBT — chronological lists
     ├── test_pflanzen_fotos_properties.py   # PBT — photo upload/management
     ├── test_pflanzen_fotos.py             # Example tests — photo features
-    └── test_gartenkarte_properties.py     # PBT — garden map (12 properties)
+    ├── test_gartenkarte_properties.py     # PBT — garden map (12 properties)
+    └── test_karten_optimierung_properties.py # PBT — garden map filters, markers, highlighting (5 properties)
 ```
 
 ## Architecture Patterns
@@ -36,7 +37,7 @@
 - `init_db()` creates tables + runs migrations on app startup; failure logs a German error and exits
 - DB connections: request-scoped via Flask `g` inside requests, fresh connections outside (tests, scripts)
 - Templates extend `base.html`; forms use POST with redirect (PRG pattern)
-- Shared helpers: `_parse_plant_form()` for add/edit validation, `_process_image()` for photo/map image processing
+- Shared helpers: `_parse_plant_form()` for add/edit validation, `_process_image()` for photo/map image processing, `_filter_plant_ids_by_ereignis()` for event/month filtering on garden map
 - Validation constants (valid categories, event types, light levels, etc.) defined at module level in `app.py`
 - `_safe_next()` helper for safe redirect targets after form submissions
 - Image files stored in Docker volume subdirectories: `fotos/` (plant photos), `karte/` (garden map)

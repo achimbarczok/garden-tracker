@@ -626,10 +626,11 @@ def remove_kartenbild() -> None:
 
 
 def get_kartenpositionen() -> list[dict]:
-    """Get all map positions with plant name and color."""
+    """Get all map positions with plant name, color, category and active status."""
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT kp.id, kp.plant_id, kp.x, kp.y, p.name, p.farbe "
+            "SELECT kp.id, kp.plant_id, kp.x, kp.y, "
+            "p.name, p.farbe, p.kategorie, p.aktiv "
             "FROM kartenpositionen kp "
             "JOIN plants p ON kp.plant_id = p.id "
             "ORDER BY kp.id"

@@ -757,13 +757,55 @@ def phaenologie_remove(phaenologie_id: int):
     return redirect(url_for("phaenologie_page", jahr=jahr))
 
 
+def _filter_plant_ids_by_ereignis(ereignisse, filter_ereignis, filter_monat):
+    """Filter events by type and/or month, return set of matching plant_ids."""
+    if filter_ereignis:
+        ereignisse = [e for e in ereignisse if e["ereignistyp"] == filter_ereignis]
+    if filter_monat:
+        try:
+            fm = int(filter_monat)
+        except ValueError:
+            fm = None
+        if fm and 1 <= fm <= 12:
+            ereignisse = [e for e in ereignisse if e["startmonat"] <= fm <= e["endmonat"]]
+    return {e["plant_id"] for e in ereignisse}
+
+
 @app.route("/gartenkarte")
 def gartenkarte_page():
     kartenbild = get_kartenbild()
     positionen = get_kartenpositionen()
     plants = get_all_plants()
-    return render_template("gartenkarte.html", kartenbild=kartenbild,
-                           positionen=positionen, plants=plants)
+
+    # Nur aktive Pflanzen anzeigen
+    positionen = [p for p in positionen if p.get("aktiv", 1) == 1]
+
+    filter_kategorie = request.args.get("kategorie", "")
+    filter_ereignis = request.args.get("ereignis", "")
+    filter_monat = request.args.get("monat", "")
+
+    # Filter: Kategorie
+    if filter_kategorie:
+        positionen = [p for p in positionen if p.get("kategorie") == filter_kategorie]
+
+    # Filter: Ereignistyp + Monat (benötigt Ereignis-Lookup)
+    if filter_ereignis or filter_monat:
+        ereignisse = get_all_ereignisse()
+        plant_ids_mit_ereignis = _filter_plant_ids_by_ereignis(
+            ereignisse, filter_ereignis, filter_monat
+        )
+        positionen = [p for p in positionen if p["plant_id"] in plant_ids_mit_ereignis]
+
+    return render_template("gartenkarte.html",
+                           kartenbild=kartenbild,
+                           positionen=positionen,
+                           plants=plants,
+                           german_months=GERMAN_MONTHS,
+                           valid_kategorien=VALID_KATEGORIEN,
+                           valid_ereignistypen=sorted(VALID_EREIGNISTYPEN),
+                           filter_kategorie=filter_kategorie,
+                           filter_ereignis=filter_ereignis,
+                           filter_monat=filter_monat)
 
 
 @app.route("/gartenkarte/bild/upload", methods=["POST"])
