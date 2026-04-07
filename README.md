@@ -2,6 +2,8 @@
 
 Eine persönliche Web-App zur Verwaltung von Gartenpflanzen mit Ereigniskalender, Beobachtungslogbuch und phänologischem Kalender. Läuft als Docker-Container auf einem Raspberry Pi und speichert Daten in SQLite.
 
+![Garten-Tracker Pflanzenliste](docs/garten-tracker.png)
+
 ## Funktionen
 
 - **Pflanzenverwaltung** — Kategorie, Typ, Sorte, Lichtbedarf, Lebensdauer, Farbe, Anzahl, Pflanzmonat/-jahr, Beschreibung, Kommentar
