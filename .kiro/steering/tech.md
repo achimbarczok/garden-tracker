@@ -6,6 +6,7 @@
 - SQLite with `sqlite3` stdlib module (no ORM)
 - Jinja2 templates
 - Pillow (image processing: EXIF rotation, resize, JPEG conversion)
+- anthropic (Claude API client for monthly garden report)
 
 ## Frontend
 - Server-rendered HTML via Jinja2 templates
@@ -17,6 +18,9 @@
 - Docker (python:3.12-slim base image, non-root user)
 - SQLite database file at path from `DB_PATH` env var (default `/data/plants.db`)
 - Docker volume for persistent data (DB + `fotos/` + `karte/` directories)
+- Cron job on host for monthly report (`0 8 1 * * docker exec garden-tracker python monthly_report.py`)
+- Gmail SMTP (smtp.gmail.com:587, TLS) for outbound email
+- Anthropic API (HTTPS) for AI-generated report text
 
 ## Testing
 - pytest
@@ -36,6 +40,11 @@ DB_PATH=plants.db flask run
 
 # Seed the database with sample plants
 DB_PATH=plants.db python seed_plants.py
+DB_PATH=plants.db python seed_weitere_pflanzen.py
+DB_PATH=plants.db python seed_wildtulpe_etc.py
+
+# Send monthly garden report (test run)
+DB_PATH=plants.db ANTHROPIC_API_KEY=... MAIL_FROM=... MAIL_TO=... MAIL_PASSWORD=... python monthly_report.py
 
 # Docker build & run
 docker build -t garden-tracker .
@@ -49,3 +58,9 @@ docker run --rm -v garden-data:/data -v $(pwd):/backup alpine \
 ## Key Environment Variables
 - `DB_PATH` — path to SQLite database file (default: `/data/plants.db`)
 - `PORT` — Flask server port (default: `5000`)
+- `ANTHROPIC_API_KEY` — Anthropic API key for monthly report generation
+- `MAIL_FROM` — sender Gmail address for monthly report
+- `MAIL_TO` — recipient email address for monthly report
+- `MAIL_PASSWORD` — Gmail App Password (not the regular Gmail password)
+- `MAIL_SMTP_HOST` — SMTP server (default: `smtp.gmail.com`)
+- `MAIL_SMTP_PORT` — SMTP port (default: `587`)

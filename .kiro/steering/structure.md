@@ -4,9 +4,12 @@
 ├── app.py              # Flask application — all routes, validation, helpers, constants
 ├── db.py               # Database layer — init, migrations (V1–V6), all CRUD functions
 ├── conftest.py         # Root pytest config — ensures project root on sys.path
-├── seed_plants.py      # One-time seed script for sample plant data
-├── seed_neue_pflanzen.py # Additional seed script for more plant data
-├── requirements.txt    # Python dependencies
+├── monthly_report.py   # Monthly garden report — DB query, Claude API, Gmail SMTP
+├── seed_plants.py      # One-time seed script for initial plant data (15 plants)
+├── seed_neue_pflanzen.py # Seed script for Gartenpflege entries (Kompost, Gartenlaube)
+├── seed_weitere_pflanzen.py # Seed script for more plants (Hibiscus, Frühblüher, Stauden, etc.)
+├── seed_wildtulpe_etc.py # Seed script for 18 plants + Meisen-Häuschen
+├── requirements.txt    # Python dependencies (flask, hypothesis, Pillow, pytest, anthropic)
 ├── Dockerfile          # Container definition (python:3.12-slim, non-root user)
 ├── templates/
 │   ├── base.html       # Base layout (header, nav with 4 links, page wrapper)
@@ -25,6 +28,8 @@
     ├── test_chronologische_listen_properties.py # PBT — chronological lists
     ├── test_pflanzen_fotos_properties.py   # PBT — photo upload/management
     ├── test_pflanzen_fotos.py             # Example tests — photo features
+    ├── test_ui_konsistenz.py              # Example tests — UI consistency
+    ├── test_ui_konsistenz_properties.py   # PBT — UI consistency
     ├── test_gartenkarte_properties.py     # PBT — garden map (12 properties)
     └── test_karten_optimierung_properties.py # PBT — garden map filters, markers, highlighting (5 properties)
 ```
@@ -41,6 +46,8 @@
 - Validation constants (valid categories, event types, light levels, etc.) defined at module level in `app.py`
 - `_safe_next()` helper for safe redirect targets after form submissions
 - Image files stored in Docker volume subdirectories: `fotos/` (plant photos), `karte/` (garden map)
+- Standalone scripts (seed_*.py, monthly_report.py) use `get_db()` outside Flask context — returns fresh connection
+- `monthly_report.py` is a standalone CLI script: reads DB, calls Anthropic API, sends Gmail — no Flask dependency
 
 ## Conventions
 - German domain terminology throughout code: `ereignis`, `beobachtung`, `pflanze`, `lichtbedarf`, `lebensdauer`, `kategorie`, `phaenologie`, `sortierwert`, `kartenbild`, `kartenposition`
