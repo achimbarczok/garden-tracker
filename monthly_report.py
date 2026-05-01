@@ -254,14 +254,20 @@ def baue_html_mail(monat: int, brief_html: str) -> str:
 
 
 def sende_mail(monat: int, html_inhalt: str) -> None:
-    """Verschickt die HTML-Mail per Gmail SMTP."""
+    """Verschickt die HTML-Mail per Gmail SMTP.
+
+    MAIL_TO kann kommasepariert mehrere Empfänger enthalten,
+    z.B. "achim@example.com,kiki@example.com"
+    """
     monatsname = GERMAN_MONTHS[monat]
     jahr = date.today().year
+
+    empfaenger = [addr.strip() for addr in MAIL_TO.split(",") if addr.strip()]
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"🌿 Gartenbrief {monatsname} {jahr}"
     msg["From"] = MAIL_FROM
-    msg["To"] = MAIL_TO
+    msg["To"] = ", ".join(empfaenger)
 
     # Nur HTML-Teil (kein Plain-Text-Fallback nötig für persönliche Mail)
     msg.attach(MIMEText(html_inhalt, "html", "utf-8"))
@@ -270,7 +276,7 @@ def sende_mail(monat: int, html_inhalt: str) -> None:
         server.ehlo()
         server.starttls()
         server.login(MAIL_FROM, MAIL_PASSWORD)
-        server.sendmail(MAIL_FROM, MAIL_TO, msg.as_string())
+        server.sendmail(MAIL_FROM, empfaenger, msg.as_string())
 
 
 # ---------------------------------------------------------------------------
