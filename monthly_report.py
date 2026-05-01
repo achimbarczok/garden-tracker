@@ -1,0 +1,326 @@
+"""Monatlicher Gartenbericht per E-Mail.
+
+Liest die Pflanzendaten aus der Datenbank, erstellt mit Claude (Anthropic API)
+einen schön formulierten deutschen Gartenbrief für den aktuellen Monat und
+verschickt ihn per Gmail SMTP.
+
+Benötigte Umgebungsvariablen:
+    DB_PATH            — Pfad zur SQLite-Datenbank (Standard: /data/plants.db)
+    ANTHROPIC_API_KEY  — Anthropic API-Key
+    MAIL_FROM          — Absender-Adresse (z.B. dein.garten@gmail.com)
+    MAIL_TO            — Empfänger-Adresse
+    MAIL_PASSWORD      — Gmail App-Passwort (nicht das normale Gmail-Passwort!)
+    MAIL_SMTP_HOST     — SMTP-Server (Standard: smtp.gmail.com)
+    MAIL_SMTP_PORT     — SMTP-Port (Standard: 587)
+
+Ausführen:
+    docker exec garden-tracker python monthly_report.py
+
+Oder lokal:
+    DB_PATH=plants.db ANTHROPIC_API_KEY=... MAIL_FROM=... MAIL_TO=... MAIL_PASSWORD=... python monthly_report.py
+"""
+
+import os
+import smtplib
+import sqlite3
+import sys
+from datetime import date
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+import anthropic
+
+# ---------------------------------------------------------------------------
+# Konfiguration aus Umgebungsvariablen
+# ---------------------------------------------------------------------------
+
+DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+MAIL_FROM = os.environ.get("MAIL_FROM", "")
+MAIL_TO = os.environ.get("MAIL_TO", "")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
+MAIL_SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
+MAIL_SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", "587"))
+
+GERMAN_MONTHS = {
+    1: "Januar", 2: "Februar", 3: "März", 4: "April",
+    5: "Mai", 6: "Juni", 7: "Juli", 8: "August",
+    9: "September", 10: "Oktober", 11: "November", 12: "Dezember",
+}
+
+# Reihenfolge der Ereignistypen im Bericht
+EREIGNIS_REIHENFOLGE = [
+    "Vorkultur",
+    "Direktsaat",
+    "Auspflanzen",
+    "Blüte",
+    "Ernte",
+    "Rückschnitt",
+    "Düngen",
+    "Pflege",
+]
+
+
+# ---------------------------------------------------------------------------
+# Datenbankabfrage
+# ---------------------------------------------------------------------------
+
+def get_ereignisse_fuer_monat(monat: int) -> dict[str, list[dict]]:
+    """Alle aktiven Pflanzen mit Ereignissen im angegebenen Monat, gruppiert nach Ereignistyp."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+
+    rows = conn.execute(
+        """
+        SELECT
+            p.name,
+            p.kategorie,
+            p.beschreibung,
+            e.ereignistyp,
+            e.startmonat,
+            e.endmonat,
+            e.start_detail,
+            e.end_detail
+        FROM ereignisse e
+        JOIN plants p ON e.plant_id = p.id
+        WHERE p.aktiv = 1
+          AND e.startmonat <= ?
+          AND e.endmonat >= ?
+        ORDER BY e.ereignistyp, p.name COLLATE NOCASE
+        """,
+        (monat, monat),
+    ).fetchall()
+
+    conn.close()
+
+    # Gruppieren nach Ereignistyp
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        etyp = row["ereignistyp"]
+        if etyp not in grouped:
+            grouped[etyp] = []
+        grouped[etyp].append({
+            "name": row["name"],
+            "kategorie": row["kategorie"],
+            "beschreibung": row["beschreibung"] or "",
+            "startmonat": row["startmonat"],
+            "endmonat": row["endmonat"],
+            "start_detail": row["start_detail"],
+            "end_detail": row["end_detail"],
+        })
+
+    return grouped
+
+
+# ---------------------------------------------------------------------------
+# Prompt-Aufbau
+# ---------------------------------------------------------------------------
+
+def _zeitraum_text(eintrag: dict, monat: int) -> str:
+    """Beschreibt den Zeitraum eines Ereignisses relativ zum aktuellen Monat."""
+    start = eintrag["startmonat"]
+    end = eintrag["endmonat"]
+    if start == end:
+        return ""
+    if start == monat:
+        return " (beginnt diesen Monat)"
+    if end == monat:
+        return " (letzter Monat)"
+    return f" (läuft noch bis {GERMAN_MONTHS[end]})"
+
+
+def baue_prompt(monat: int, grouped: dict[str, list[dict]]) -> str:
+    """Erstellt den Prompt für Claude aus den Datenbankdaten."""
+    monatsname = GERMAN_MONTHS[monat]
+
+    abschnitte = []
+    for etyp in EREIGNIS_REIHENFOLGE:
+        if etyp not in grouped:
+            continue
+        eintraege = grouped[etyp]
+        zeilen = []
+        for e in eintraege:
+            zeitraum = _zeitraum_text(e, monat)
+            zeile = f"- {e['name']} ({e['kategorie']}){zeitraum}"
+            # Kurze Beschreibung anhängen, wenn vorhanden (erste 200 Zeichen)
+            if e["beschreibung"]:
+                kurztext = e["beschreibung"].strip().split("\n")[0][:200]
+                zeile += f"\n  Info: {kurztext}"
+            zeilen.append(zeile)
+        abschnitte.append(f"### {etyp}\n" + "\n".join(zeilen))
+
+    if not abschnitte:
+        pflanzenliste = "Keine Einträge für diesen Monat."
+    else:
+        pflanzenliste = "\n\n".join(abschnitte)
+
+    prompt = f"""Du bist ein freundlicher Gartenassistent. Schreibe einen persönlichen, 
+warmherzigen monatlichen Gartenbrief auf Deutsch für den Monat {monatsname}.
+
+Der Brief soll:
+- Einen kurzen einleitenden Satz über den Monat im Garten enthalten
+- Die Aufgaben und Ereignisse nach Themen gegliedert beschreiben (nutze die vorgegebene Struktur)
+- Praktische Hinweise aus den Pflanzenbeschreibungen einarbeiten, wo sinnvoll
+- Einen motivierenden Abschlusssatz enthalten
+- Nicht zu lang sein (ca. 300–500 Wörter)
+- Direkt angesprochen sein (Du-Form)
+- Als HTML formatiert sein (mit <h2>, <h3>, <ul>, <li>, <p> Tags)
+
+Hier sind die Daten aus der Gartendatenbank für {monatsname}:
+
+{pflanzenliste}
+
+Schreibe jetzt den Gartenbrief als HTML. Beginne direkt mit dem HTML-Inhalt, ohne Präambel.
+"""
+    return prompt
+
+
+# ---------------------------------------------------------------------------
+# Claude API
+# ---------------------------------------------------------------------------
+
+def generiere_brief(prompt: str) -> str:
+    """Sendet den Prompt an Claude und gibt den generierten Text zurück."""
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+    message = client.messages.create(
+        model="claude-haiku-4-5",
+        max_tokens=2048,
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+    )
+    return message.content[0].text
+
+
+# ---------------------------------------------------------------------------
+# E-Mail-Versand
+# ---------------------------------------------------------------------------
+
+def baue_html_mail(monat: int, brief_html: str) -> str:
+    """Bettet den generierten Brief in ein vollständiges HTML-Dokument ein."""
+    monatsname = GERMAN_MONTHS[monat]
+    return f"""<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {{
+    font-family: Georgia, 'Times New Roman', serif;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px;
+    color: #2d2d2d;
+    background: #fafaf8;
+    line-height: 1.7;
+  }}
+  h1 {{
+    color: #4a7c59;
+    border-bottom: 2px solid #c8e6c9;
+    padding-bottom: 8px;
+    font-size: 1.5em;
+  }}
+  h2 {{ color: #4a7c59; font-size: 1.2em; margin-top: 1.5em; }}
+  h3 {{
+    color: #6a9e7a;
+    font-size: 1em;
+    margin-top: 1.2em;
+    margin-bottom: 0.3em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }}
+  ul {{ padding-left: 1.4em; }}
+  li {{ margin-bottom: 0.4em; }}
+  p {{ margin: 0.8em 0; }}
+  .footer {{
+    margin-top: 2em;
+    padding-top: 1em;
+    border-top: 1px solid #ddd;
+    font-size: 0.85em;
+    color: #888;
+  }}
+</style>
+</head>
+<body>
+<h1>🌿 Gartenbrief {monatsname}</h1>
+{brief_html}
+<div class="footer">
+  Dieser Brief wurde automatisch von deinem Garten-Tracker erstellt.
+</div>
+</body>
+</html>"""
+
+
+def sende_mail(monat: int, html_inhalt: str) -> None:
+    """Verschickt die HTML-Mail per Gmail SMTP."""
+    monatsname = GERMAN_MONTHS[monat]
+    jahr = date.today().year
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"🌿 Gartenbrief {monatsname} {jahr}"
+    msg["From"] = MAIL_FROM
+    msg["To"] = MAIL_TO
+
+    # Nur HTML-Teil (kein Plain-Text-Fallback nötig für persönliche Mail)
+    msg.attach(MIMEText(html_inhalt, "html", "utf-8"))
+
+    with smtplib.SMTP(MAIL_SMTP_HOST, MAIL_SMTP_PORT) as server:
+        server.ehlo()
+        server.starttls()
+        server.login(MAIL_FROM, MAIL_PASSWORD)
+        server.sendmail(MAIL_FROM, MAIL_TO, msg.as_string())
+
+
+# ---------------------------------------------------------------------------
+# Hauptprogramm
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    # Konfiguration prüfen
+    fehlend = []
+    if not ANTHROPIC_API_KEY:
+        fehlend.append("ANTHROPIC_API_KEY")
+    if not MAIL_FROM:
+        fehlend.append("MAIL_FROM")
+    if not MAIL_TO:
+        fehlend.append("MAIL_TO")
+    if not MAIL_PASSWORD:
+        fehlend.append("MAIL_PASSWORD")
+    if fehlend:
+        print(f"Fehler: Folgende Umgebungsvariablen fehlen: {', '.join(fehlend)}")
+        sys.exit(1)
+
+    heute = date.today()
+    monat = heute.month
+    monatsname = GERMAN_MONTHS[monat]
+
+    print(f"Erstelle Gartenbrief für {monatsname} {heute.year}...")
+
+    # 1. Daten aus DB holen
+    print("  → Lese Pflanzendaten aus Datenbank...")
+    grouped = get_ereignisse_fuer_monat(monat)
+    gesamt = sum(len(v) for v in grouped.values())
+    print(f"  → {gesamt} Ereignisse in {len(grouped)} Kategorien gefunden.")
+
+    if not grouped:
+        print("  → Keine Ereignisse für diesen Monat. Mail wird trotzdem verschickt.")
+
+    # 2. Prompt bauen und Claude befragen
+    print("  → Generiere Text mit Claude...")
+    prompt = baue_prompt(monat, grouped)
+    brief_html = generiere_brief(prompt)
+    print("  → Text generiert.")
+
+    # 3. HTML-Mail zusammenbauen
+    html_mail = baue_html_mail(monat, brief_html)
+
+    # 4. Mail verschicken
+    print(f"  → Sende Mail an {MAIL_TO}...")
+    sende_mail(monat, html_mail)
+    print(f"  ✓ Gartenbrief für {monatsname} erfolgreich verschickt.")
+
+
+if __name__ == "__main__":
+    main()
