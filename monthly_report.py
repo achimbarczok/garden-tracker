@@ -1,14 +1,21 @@
 """Monatlicher Gartenbericht per E-Mail.
 
-Liest die Pflanzendaten aus der Datenbank, erstellt mit Claude (Anthropic API)
+Liest die Pflanzendaten aus der Datenbank, erstellt mit einem LLM
 einen schön formulierten deutschen Gartenbrief für den aktuellen Monat und
 verschickt ihn per Gmail SMTP.
 
+Unterstützte LLM-Provider (über LLM_PROVIDER):
+    claude   — Anthropic Claude (Standard)
+    mistral  — Mistral AI
+
 Benötigte Umgebungsvariablen:
     DB_PATH            — Pfad zur SQLite-Datenbank (Standard: /data/plants.db)
-    ANTHROPIC_API_KEY  — Anthropic API-Key
+    LLM_PROVIDER       — LLM-Provider: "claude" oder "mistral" (Standard: claude)
+    LLM_MODEL          — Modellname (optional, Provider-spezifischer Default)
+    ANTHROPIC_API_KEY  — API-Key für Claude (wenn LLM_PROVIDER=claude)
+    MISTRAL_API_KEY    — API-Key für Mistral (wenn LLM_PROVIDER=mistral)
     MAIL_FROM          — Absender-Adresse (z.B. dein.garten@gmail.com)
-    MAIL_TO            — Empfänger-Adresse
+    MAIL_TO            — Empfänger-Adresse(n), kommasepariert
     MAIL_PASSWORD      — Gmail App-Passwort (nicht das normale Gmail-Passwort!)
     MAIL_SMTP_HOST     — SMTP-Server (Standard: smtp.gmail.com)
     MAIL_SMTP_PORT     — SMTP-Port (Standard: 587)
@@ -20,22 +27,24 @@ Oder lokal:
     DB_PATH=plants.db ANTHROPIC_API_KEY=... MAIL_FROM=... MAIL_TO=... MAIL_PASSWORD=... python monthly_report.py
 """
 
+from __future__ import annotations
+
 import os
 import smtplib
 import sqlite3
 import sys
+from abc import ABC, abstractmethod
 from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
-import anthropic
 
 # ---------------------------------------------------------------------------
 # Konfiguration aus Umgebungsvariablen
 # ---------------------------------------------------------------------------
 
 DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "claude").lower()
+LLM_MODEL = os.environ.get("LLM_MODEL", "")
 MAIL_FROM = os.environ.get("MAIL_FROM", "")
 MAIL_TO = os.environ.get("MAIL_TO", "")
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
@@ -59,6 +68,93 @@ EREIGNIS_REIHENFOLGE = [
     "Düngen",
     "Pflege",
 ]
+
+
+# ---------------------------------------------------------------------------
+# LLM-Provider-Abstraktion
+# ---------------------------------------------------------------------------
+
+class LLMProvider(ABC):
+    """Abstrakte Basisklasse für LLM-Provider."""
+
+    @abstractmethod
+    def generate(self, prompt: str) -> str:
+        """Sendet den Prompt an das LLM und gibt den generierten Text zurück."""
+
+    @abstractmethod
+    def validate_config(self) -> list[str]:
+        """Prüft ob alle nötigen Umgebungsvariablen gesetzt sind.
+        Gibt eine Liste fehlender Variablen zurück (leer = alles ok)."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Anzeigename des Providers."""
+
+
+class ClaudeProvider(LLMProvider):
+    """Anthropic Claude API."""
+
+    def __init__(self) -> None:
+        self.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        self.model = LLM_MODEL or "claude-haiku-4-5"
+
+    @property
+    def name(self) -> str:
+        return f"Claude ({self.model})"
+
+    def validate_config(self) -> list[str]:
+        return ["ANTHROPIC_API_KEY"] if not self.api_key else []
+
+    def generate(self, prompt: str) -> str:
+        import anthropic
+        client = anthropic.Anthropic(api_key=self.api_key)
+        message = client.messages.create(
+            model=self.model,
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return message.content[0].text
+
+
+class MistralProvider(LLMProvider):
+    """Mistral AI API."""
+
+    def __init__(self) -> None:
+        self.api_key = os.environ.get("MISTRAL_API_KEY", "")
+        self.model = LLM_MODEL or "mistral-small-latest"
+
+    @property
+    def name(self) -> str:
+        return f"Mistral ({self.model})"
+
+    def validate_config(self) -> list[str]:
+        return ["MISTRAL_API_KEY"] if not self.api_key else []
+
+    def generate(self, prompt: str) -> str:
+        from mistralai import Mistral
+        client = Mistral(api_key=self.api_key)
+        response = client.chat.complete(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2048,
+        )
+        return response.choices[0].message.content
+
+
+PROVIDERS: dict[str, type[LLMProvider]] = {
+    "claude": ClaudeProvider,
+    "mistral": MistralProvider,
+}
+
+
+def get_provider() -> LLMProvider:
+    """Erstellt den konfigurierten LLM-Provider."""
+    if LLM_PROVIDER not in PROVIDERS:
+        print(f"Fehler: Unbekannter LLM_PROVIDER '{LLM_PROVIDER}'. "
+              f"Verfügbar: {', '.join(PROVIDERS.keys())}")
+        sys.exit(1)
+    return PROVIDERS[LLM_PROVIDER]()
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +227,7 @@ def _zeitraum_text(eintrag: dict, monat: int) -> str:
 
 
 def baue_prompt(monat: int, grouped: dict[str, list[dict]]) -> str:
-    """Erstellt den Prompt für Claude aus den Datenbankdaten."""
+    """Erstellt den Prompt aus den Datenbankdaten."""
     monatsname = GERMAN_MONTHS[monat]
 
     abschnitte = []
@@ -158,14 +254,29 @@ def baue_prompt(monat: int, grouped: dict[str, list[dict]]) -> str:
     prompt = f"""Du bist ein freundlicher Gartenassistent. Schreibe einen persönlichen, 
 warmherzigen monatlichen Gartenbrief auf Deutsch für den Monat {monatsname}.
 
-Der Brief soll:
-- Einen kurzen einleitenden Satz über den Monat im Garten enthalten
-- Die Aufgaben und Ereignisse nach Themen gegliedert beschreiben (nutze die vorgegebene Struktur)
-- Praktische Hinweise aus den Pflanzenbeschreibungen einarbeiten, wo sinnvoll
-- Einen motivierenden Abschlusssatz enthalten
-- Nicht zu lang sein (ca. 300–500 Wörter)
-- Direkt angesprochen sein (Du-Form)
-- Als HTML formatiert sein (mit <h2>, <h3>, <ul>, <li>, <p> Tags)
+Der Brief soll folgende Teile enthalten:
+
+**Teil 1: Einleitung**
+Einen kurzen einleitenden Satz über den Monat im Garten.
+
+**Teil 2: Aufgaben und Ereignisse aus dem Garten**
+Die Aufgaben und Ereignisse nach Themen gegliedert beschreiben (nutze die vorgegebene Struktur).
+Praktische Hinweise aus den Pflanzenbeschreibungen einarbeiten, wo sinnvoll.
+
+**Teil 3: Pflanz-Tipps für den Monat**
+Am Ende zwei zusätzliche kurze Abschnitte mit allgemeinem Gartenwissen (nicht aus der Datenbank):
+- Eine Überschrift "🥕 Gemüse & Obst zum Pflanzen im {monatsname}" mit einem kurzen Absatz, 
+  welches Gemüse und Obst man in diesem Monat aussäen, vorziehen oder pflanzen kann.
+- Eine Überschrift "🌸 Blumen & Stauden im {monatsname}" mit einem kurzen Absatz,
+  welche Blumen und Stauden man jetzt pflanzen, teilen oder pflegen kann.
+
+**Teil 4: Abschluss**
+Einen motivierenden Abschlusssatz.
+
+Formatierung:
+- Nicht zu lang sein (ca. 400–600 Wörter)
+- Direkt angesprochen (Du-Form)
+- Als HTML formatiert (mit <h2>, <h3>, <ul>, <li>, <p> Tags)
 
 Hier sind die Daten aus der Gartendatenbank für {monatsname}:
 
@@ -174,24 +285,6 @@ Hier sind die Daten aus der Gartendatenbank für {monatsname}:
 Schreibe jetzt den Gartenbrief als HTML. Beginne direkt mit dem HTML-Inhalt, ohne Präambel.
 """
     return prompt
-
-
-# ---------------------------------------------------------------------------
-# Claude API
-# ---------------------------------------------------------------------------
-
-def generiere_brief(prompt: str) -> str:
-    """Sendet den Prompt an Claude und gibt den generierten Text zurück."""
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-
-    message = client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=2048,
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-    )
-    return message.content[0].text
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +362,6 @@ def sende_mail(monat: int, html_inhalt: str) -> None:
     msg["From"] = MAIL_FROM
     msg["To"] = ", ".join(empfaenger)
 
-    # Nur HTML-Teil (kein Plain-Text-Fallback nötig für persönliche Mail)
     msg.attach(MIMEText(html_inhalt, "html", "utf-8"))
 
     with smtplib.SMTP(MAIL_SMTP_HOST, MAIL_SMTP_PORT) as server:
@@ -284,10 +376,11 @@ def sende_mail(monat: int, html_inhalt: str) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    # Provider erstellen und konfigurieren
+    provider = get_provider()
+
     # Konfiguration prüfen
-    fehlend = []
-    if not ANTHROPIC_API_KEY:
-        fehlend.append("ANTHROPIC_API_KEY")
+    fehlend = provider.validate_config()
     if not MAIL_FROM:
         fehlend.append("MAIL_FROM")
     if not MAIL_TO:
@@ -303,6 +396,7 @@ def main() -> None:
     monatsname = GERMAN_MONTHS[monat]
 
     print(f"Erstelle Gartenbrief für {monatsname} {heute.year}...")
+    print(f"  → LLM-Provider: {provider.name}")
 
     # 1. Daten aus DB holen
     print("  → Lese Pflanzendaten aus Datenbank...")
@@ -313,10 +407,10 @@ def main() -> None:
     if not grouped:
         print("  → Keine Ereignisse für diesen Monat. Mail wird trotzdem verschickt.")
 
-    # 2. Prompt bauen und Claude befragen
-    print("  → Generiere Text mit Claude...")
+    # 2. Prompt bauen und LLM befragen
+    print(f"  → Generiere Text mit {provider.name}...")
     prompt = baue_prompt(monat, grouped)
-    brief_html = generiere_brief(prompt)
+    brief_html = provider.generate(prompt)
     print("  → Text generiert.")
 
     # 3. HTML-Mail zusammenbauen
