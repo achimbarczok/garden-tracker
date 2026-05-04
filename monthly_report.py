@@ -97,7 +97,7 @@ class ClaudeProvider(LLMProvider):
 
     def __init__(self) -> None:
         self.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        self.model = LLM_MODEL or "claude-haiku-4-5"
+        self.model = LLM_MODEL or "claude-sonnet-4-20250514"
 
     @property
     def name(self) -> str:
@@ -283,8 +283,29 @@ Hier sind die Daten aus der Gartendatenbank für {monatsname}:
 {pflanzenliste}
 
 Schreibe jetzt den Gartenbrief als HTML. Beginne direkt mit dem HTML-Inhalt, ohne Präambel.
+Gib NUR den HTML-Code aus, ohne Markdown-Codeblöcke (kein ```html oder ```).
 """
     return prompt
+
+
+# ---------------------------------------------------------------------------
+# HTML-Bereinigung
+# ---------------------------------------------------------------------------
+
+import re
+
+def bereinige_llm_html(raw: str) -> str:
+    """Entfernt Markdown-Codeblock-Artefakte aus der LLM-Antwort.
+
+    LLMs geben manchmal ```html ... ``` um den HTML-Code aus,
+    obwohl man sie bittet, es nicht zu tun. Diese Funktion entfernt das.
+    """
+    text = raw.strip()
+    # Entferne führenden ```html oder ``` Block-Marker (3+ Backticks)
+    text = re.sub(r'^`{3,}\w*\s*\n?', '', text)
+    # Entferne abschließenden ``` Block-Marker (3+ Backticks)
+    text = re.sub(r'\n?`{3,}\s*$', '', text)
+    return text.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +432,7 @@ def main() -> None:
     print(f"  → Generiere Text mit {provider.name}...")
     prompt = baue_prompt(monat, grouped)
     brief_html = provider.generate(prompt)
+    brief_html = bereinige_llm_html(brief_html)
     print("  → Text generiert.")
 
     # 3. HTML-Mail zusammenbauen
