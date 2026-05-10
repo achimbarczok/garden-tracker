@@ -74,7 +74,7 @@ docker exec garden-tracker python monthly_report.py
 ```bash
 crontab -e
 # Zeile hinzufügen:
-0 8 1 * * docker exec garden-tracker python monthly_report.py >> /home/achim/gartenbrief.log 2>&1
+0 8 1 * * docker exec garden-tracker python monthly_report.py >> ~/gartenbrief.log 2>&1
 ```
 
 **Gmail App-Passwort einrichten:** Unter [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) (2FA muss aktiv sein).

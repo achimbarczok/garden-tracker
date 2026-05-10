@@ -283,7 +283,7 @@ def sende_mail(monat: int, html_inhalt: str) -> None:
     """Verschickt die HTML-Mail per Gmail SMTP.
 
     MAIL_TO kann kommasepariert mehrere Empfänger enthalten,
-    z.B. "achim@example.com,kiki@example.com"
+    z.B. "user1@example.com,user2@example.com"
     """
     monatsname = GERMAN_MONTHS[monat]
     jahr = date.today().year
