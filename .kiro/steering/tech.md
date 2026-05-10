@@ -6,12 +6,12 @@
 - SQLite with `sqlite3` stdlib module (no ORM)
 - Jinja2 templates
 - Pillow (image processing: EXIF rotation, resize, JPEG conversion)
-- anthropic (Claude API client for monthly garden report)
+- anthropic (Claude API client for monthly report and KI-Autofill)
 
 ## Frontend
 - Server-rendered HTML via Jinja2 templates
 - Vanilla CSS (no preprocessor, no CSS framework)
-- No JavaScript frameworks — minimal inline JS only (e.g. `onchange`, `confirm()`)
+- No JavaScript frameworks — minimal inline JS only (e.g. `onchange`, `confirm()`, `fetch()` for autofill)
 - Responsive design with mobile-first media queries
 
 ## Infrastructure
@@ -20,7 +20,7 @@
 - Docker volume for persistent data (DB + `fotos/` + `karte/` directories)
 - Cron job on host for monthly report (`0 8 1 * * docker exec garden-tracker python monthly_report.py`)
 - Gmail SMTP (smtp.gmail.com:587, TLS) for outbound email
-- Anthropic API (HTTPS) for AI-generated report text
+- Anthropic API (HTTPS) for AI-generated report text and KI-Autofill
 
 ## Testing
 - pytest

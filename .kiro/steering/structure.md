@@ -52,6 +52,7 @@
 - Route naming follows resource pattern: `/plant/<id>/edit`, `/plant/<id>/ereignis/add`
 - Cross-plant list routes: `/beobachtungen`, `/ereignisse` (flat lists with JOIN queries)
 - Garden map routes: `/gartenkarte`, `/gartenkarte/bild/upload`, `/gartenkarte/position/add`
+- KI-Autofill API: `POST /api/autofill` — JSON endpoint returning structured plant data from LLM
 - Error responses return the same template with an `error` variable and HTTP 400
 - Tests use `tmp_path` + `monkeypatch` to isolate the database per test
 - Property-based tests use `tempfile.TemporaryDirectory()` + `importlib.reload()` for DB isolation
