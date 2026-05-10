@@ -56,7 +56,7 @@ class ClaudeProvider(LLMProvider):
 
     def __init__(self) -> None:
         self.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        self.model = LLM_MODEL or "claude-sonnet-4-20250514"
+        self.model = LLM_MODEL or "claude-sonnet-4-6"
 
     @property
     def name(self) -> str:
