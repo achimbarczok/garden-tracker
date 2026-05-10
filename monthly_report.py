@@ -33,18 +33,17 @@ import os
 import smtplib
 import sqlite3
 import sys
-from abc import ABC, abstractmethod
 from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+from llm import get_provider
 
 # ---------------------------------------------------------------------------
 # Konfiguration aus Umgebungsvariablen
 # ---------------------------------------------------------------------------
 
 DB_PATH = os.environ.get("DB_PATH", "/data/plants.db")
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "claude").lower()
-LLM_MODEL = os.environ.get("LLM_MODEL", "")
 MAIL_FROM = os.environ.get("MAIL_FROM", "")
 MAIL_TO = os.environ.get("MAIL_TO", "")
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
@@ -68,93 +67,6 @@ EREIGNIS_REIHENFOLGE = [
     "Düngen",
     "Pflege",
 ]
-
-
-# ---------------------------------------------------------------------------
-# LLM-Provider-Abstraktion
-# ---------------------------------------------------------------------------
-
-class LLMProvider(ABC):
-    """Abstrakte Basisklasse für LLM-Provider."""
-
-    @abstractmethod
-    def generate(self, prompt: str) -> str:
-        """Sendet den Prompt an das LLM und gibt den generierten Text zurück."""
-
-    @abstractmethod
-    def validate_config(self) -> list[str]:
-        """Prüft ob alle nötigen Umgebungsvariablen gesetzt sind.
-        Gibt eine Liste fehlender Variablen zurück (leer = alles ok)."""
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Anzeigename des Providers."""
-
-
-class ClaudeProvider(LLMProvider):
-    """Anthropic Claude API."""
-
-    def __init__(self) -> None:
-        self.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        self.model = LLM_MODEL or "claude-sonnet-4-latest"
-
-    @property
-    def name(self) -> str:
-        return f"Claude ({self.model})"
-
-    def validate_config(self) -> list[str]:
-        return ["ANTHROPIC_API_KEY"] if not self.api_key else []
-
-    def generate(self, prompt: str) -> str:
-        import anthropic
-        client = anthropic.Anthropic(api_key=self.api_key)
-        message = client.messages.create(
-            model=self.model,
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return message.content[0].text
-
-
-class MistralProvider(LLMProvider):
-    """Mistral AI API."""
-
-    def __init__(self) -> None:
-        self.api_key = os.environ.get("MISTRAL_API_KEY", "")
-        self.model = LLM_MODEL or "mistral-small-latest"
-
-    @property
-    def name(self) -> str:
-        return f"Mistral ({self.model})"
-
-    def validate_config(self) -> list[str]:
-        return ["MISTRAL_API_KEY"] if not self.api_key else []
-
-    def generate(self, prompt: str) -> str:
-        from mistralai import Mistral
-        client = Mistral(api_key=self.api_key)
-        response = client.chat.complete(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=2048,
-        )
-        return response.choices[0].message.content
-
-
-PROVIDERS: dict[str, type[LLMProvider]] = {
-    "claude": ClaudeProvider,
-    "mistral": MistralProvider,
-}
-
-
-def get_provider() -> LLMProvider:
-    """Erstellt den konfigurierten LLM-Provider."""
-    if LLM_PROVIDER not in PROVIDERS:
-        print(f"Fehler: Unbekannter LLM_PROVIDER '{LLM_PROVIDER}'. "
-              f"Verfügbar: {', '.join(PROVIDERS.keys())}")
-        sys.exit(1)
-    return PROVIDERS[LLM_PROVIDER]()
 
 
 # ---------------------------------------------------------------------------

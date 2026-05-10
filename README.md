@@ -17,7 +17,7 @@ Eine persönliche Web-App zur Verwaltung von Gartenpflanzen mit Ereigniskalender
 - **Pflanzen deaktivieren** — Inaktiv setzen statt löschen, über Filter wieder einblendbar
 - **Filter** — Kategorie, Ereignistyp und Monat auf allen Listen und der Gartenkarte
 - **Monatlicher Gartenbrief** — am 1. jeden Monats per E-Mail: was blüht, was geerntet wird, was zurückgeschnitten werden muss — KI-generiert mit Claude, verschickt per Gmail
-- **Seed-Scripts** — Datenbank mit recherchierten Pflanzendaten vorausfüllen
+- **KI-Autofill** — optionale KI-gestützte Pflanzendaten-Generierung beim Hinzufügen/Bearbeiten (Beschreibung, Ereignisse, Kategorie etc.) — benötigt `ANTHROPIC_API_KEY` oder `MISTRAL_API_KEY`
 - **Responsives Design** — Desktop und Smartphone
 - **Komplett auf Deutsch**
 
@@ -53,17 +53,13 @@ Dann im Browser öffnen: `http://<raspberry-pi-ip>:8080`
 
 Die Umgebungsvariablen für den Gartenbrief (`ANTHROPIC_API_KEY`, `MAIL_*`) sind optional — ohne sie funktioniert die Web-App ganz normal, nur der monatliche Mailversand ist dann nicht möglich.
 
-## Pflanzen vorausfüllen
+## KI-Autofill
 
-Beim ersten Start können Pflanzen mit recherchierten Daten eingetragen werden:
+Beim Hinzufügen oder Bearbeiten einer Pflanze kann per Button „🤖 KI-Vorschlag" eine KI-gestützte Befüllung der Felder ausgelöst werden. Die KI generiert Beschreibung, Kategorie, Lichtbedarf, Lebensdauer und erwartete Ereignisse basierend auf dem Pflanzennamen.
 
-```bash
-docker exec garden-tracker python seed_plants.py
-docker exec garden-tracker python seed_weitere_pflanzen.py
-docker exec garden-tracker python seed_wildtulpe_etc.py
-```
+**Voraussetzung:** Ein LLM-Provider muss konfiguriert sein (Umgebungsvariable `ANTHROPIC_API_KEY` oder `MISTRAL_API_KEY`). Ohne API-Key wird der Button nicht angezeigt.
 
-Die Scripts erkennen Duplikate und überspringen bereits vorhandene Pflanzen.
+Optional kann der Provider über `LLM_PROVIDER` (`claude` oder `mistral`) und das Modell über `LLM_MODEL` gewählt werden.
 
 ## Monatlicher Gartenbrief
 
@@ -116,7 +112,6 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 DB_PATH=plants.db flask run          # App starten
-DB_PATH=plants.db python seed_plants.py  # Beispieldaten laden
 pytest                                # Tests ausführen
 ```
 

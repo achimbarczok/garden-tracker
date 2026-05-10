@@ -1,14 +1,11 @@
 # Project Structure
 
 ```
-├── app.py              # Flask application — all routes, validation, helpers, constants
+├── app.py              # Flask application — all routes, validation, helpers, constants, autofill endpoint
 ├── db.py               # Database layer — init, migrations (V1–V6), all CRUD functions
 ├── conftest.py         # Root pytest config — ensures project root on sys.path
 ├── monthly_report.py   # Monthly garden report — DB query, Claude API, Gmail SMTP
-├── seed_plants.py      # One-time seed script for initial plant data (15 plants)
-├── seed_neue_pflanzen.py # Seed script for Gartenpflege entries (Kompost, Gartenlaube)
-├── seed_weitere_pflanzen.py # Seed script for more plants (Hibiscus, Frühblüher, Stauden, etc.)
-├── seed_wildtulpe_etc.py # Seed script for 18 plants + Meisen-Häuschen
+├── llm.py              # Shared LLM-Provider module (Claude, Mistral) — used by monthly_report.py and app.py
 ├── requirements.txt    # Python dependencies (flask, hypothesis, Pillow, pytest, anthropic)
 ├── Dockerfile          # Container definition (python:3.12-slim, non-root user)
 ├── templates/
@@ -46,8 +43,9 @@
 - Validation constants (valid categories, event types, light levels, etc.) defined at module level in `app.py`
 - `_safe_next()` helper for safe redirect targets after form submissions
 - Image files stored in Docker volume subdirectories: `fotos/` (plant photos), `karte/` (garden map)
-- Standalone scripts (seed_*.py, monthly_report.py) use `get_db()` outside Flask context — returns fresh connection
-- `monthly_report.py` is a standalone CLI script: reads DB, calls Anthropic API, sends Gmail — no Flask dependency
+- Standalone script `monthly_report.py` uses `get_db()` outside Flask context — returns fresh connection
+- `monthly_report.py` is a standalone CLI script: reads DB, calls LLM via `llm.py`, sends Gmail — no Flask dependency
+- `llm.py` provides `LLMProvider` abstraction (Claude/Mistral), `get_provider()`, and `is_llm_configured()` — used by both `app.py` (autofill) and `monthly_report.py` (report generation)
 
 ## Conventions
 - German domain terminology throughout code: `ereignis`, `beobachtung`, `pflanze`, `lichtbedarf`, `lebensdauer`, `kategorie`, `phaenologie`, `sortierwert`, `kartenbild`, `kartenposition`

@@ -22,7 +22,8 @@
 {% endif %}
 
 <div class="card">
-<form method="post" action="/plant/{{ plant.id }}/edit">
+<div id="autofill-error" style="display:none;background:#f8d7da;color:#721c24;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:.875rem"></div>
+<form method="post" action="/plant/{{ plant.id }}/edit" id="edit-plant-form">
     <div class="form-grid">
         <div class="form-field">
             <label>Name *</label>
@@ -96,11 +97,24 @@
         </div>
     </div>
     <div class="form-actions">
+        {% if llm_available %}
+        <button type="button" id="btn-autofill-edit" class="btn btn-outline">🤖 KI-Vorschlag</button>
+        {% endif %}
         <button type="submit" class="btn btn-primary">💾 Speichern</button>
         <a href="/" class="btn btn-ghost">Abbrechen</a>
     </div>
 </form>
 </div>
+
+{% if llm_available %}
+<div id="autofill-ereignisse-edit" style="display:none;margin-top:1rem;margin-bottom:1.5rem">
+    <div class="card">
+        <h3 style="margin-top:0">🗓️ Vorgeschlagene Ereignisse</h3>
+        <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem">Klicke „Übernehmen", um einen Vorschlag in den Jahresplan zu übernehmen.</p>
+        <ul id="autofill-ereignisse-edit-list" style="list-style:none;padding:0;margin:0"></ul>
+    </div>
+</div>
+{% endif %}
 
 <!-- Ereignisse -->
 <h2>🗓️ Jahresplan</h2>
@@ -457,5 +471,143 @@ function toggleBis(sel) {
     });
 }
 </script>
+
+{% if llm_available %}
+<script>
+(function() {
+    var btn = document.getElementById('btn-autofill-edit');
+    var form = document.getElementById('edit-plant-form');
+    var errorDiv = document.getElementById('autofill-error');
+    var ereignisseDiv = document.getElementById('autofill-ereignisse-edit');
+    var ereignisseList = document.getElementById('autofill-ereignisse-edit-list');
+    var addEreignisForm = document.getElementById('add-ereignis-form');
+
+    var MONATE = {{ german_months | tojson }};
+
+    btn.addEventListener('click', function() {
+        var nameInput = form.querySelector('input[name="name"]');
+        var name = nameInput.value.trim();
+        if (!name) return;
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Lade...';
+        errorDiv.style.display = 'none';
+        ereignisseDiv.style.display = 'none';
+
+        fetch('/api/autofill', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name})
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(result) {
+            if (result.ok) {
+                var d = result.data;
+                // Only fill EMPTY fields
+                if (d.beschreibung) setFieldIfEmpty('beschreibung', d.beschreibung);
+                if (d.typ) setFieldIfEmpty('type', d.typ);
+                if (d.sorte) setFieldIfEmpty('variety', d.sorte);
+                if (d.lichtbedarf) setSelectIfEmpty('lichtbedarf', d.lichtbedarf);
+                if (d.lebensdauer) setSelectIfEmpty('lebensdauer', d.lebensdauer);
+                if (d.kategorie) setSelectIfEmpty('kategorie', d.kategorie);
+                // Show ereignisse as adoptable suggestions
+                if (d.ereignisse && d.ereignisse.length > 0) {
+                    ereignisseList.innerHTML = '';
+                    d.ereignisse.forEach(function(e) {
+                        var li = document.createElement('li');
+                        li.style.cssText = 'padding:.5rem .75rem;margin-bottom:.4rem;background:var(--green-pale);border-radius:4px;font-size:.875rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap';
+                        var zeitraum = '';
+                        if (e.start_detail) zeitraum += e.start_detail + ' ';
+                        zeitraum += MONATE[String(e.startmonat)];
+                        if (e.startmonat !== e.endmonat || e.start_detail !== e.end_detail) {
+                            zeitraum += ' – ';
+                            if (e.end_detail) zeitraum += e.end_detail + ' ';
+                            zeitraum += MONATE[String(e.endmonat)];
+                        }
+                        var textSpan = document.createElement('span');
+                        textSpan.innerHTML = '<span class="ereignis-tag" data-typ="' + e.ereignistyp + '">' + e.ereignistyp + '</span> ' + zeitraum;
+                        textSpan.style.flex = '1';
+                        li.appendChild(textSpan);
+
+                        var adoptBtn = document.createElement('button');
+                        adoptBtn.type = 'button';
+                        adoptBtn.className = 'btn btn-primary btn-sm';
+                        adoptBtn.textContent = 'Übernehmen';
+                        adoptBtn.addEventListener('click', function() {
+                            submitEreignis(e, li, adoptBtn);
+                        });
+                        li.appendChild(adoptBtn);
+
+                        ereignisseList.appendChild(li);
+                    });
+                    ereignisseDiv.style.display = '';
+                }
+            } else {
+                errorDiv.textContent = result.error || 'Unbekannter Fehler.';
+                errorDiv.style.display = '';
+            }
+        })
+        .catch(function() {
+            errorDiv.textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+            errorDiv.style.display = '';
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = '🤖 KI-Vorschlag';
+        });
+    });
+
+    function setFieldIfEmpty(name, value) {
+        var el = form.querySelector('[name="' + name + '"]');
+        if (el && !el.value.trim()) el.value = value;
+    }
+
+    function setSelectIfEmpty(name, value) {
+        var el = form.querySelector('select[name="' + name + '"]');
+        if (!el) return;
+        // Only fill if currently on the empty/default option
+        if (el.value) return;
+        for (var i = 0; i < el.options.length; i++) {
+            if (el.options[i].value === value) {
+                el.selectedIndex = i;
+                return;
+            }
+        }
+    }
+
+    function submitEreignis(e, li, adoptBtn) {
+        adoptBtn.disabled = true;
+        adoptBtn.textContent = '⏳';
+        var formData = new FormData();
+        formData.append('ereignistyp', e.ereignistyp);
+        formData.append('start_detail', e.start_detail || '');
+        formData.append('startmonat', e.startmonat);
+        formData.append('end_detail', e.end_detail || '');
+        formData.append('endmonat', e.endmonat);
+        formData.append('next', window.location.pathname);
+
+        fetch(addEreignisForm.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(resp) {
+            if (resp.ok || resp.redirected) {
+                li.style.background = 'var(--bg-muted)';
+                li.style.opacity = '0.6';
+                adoptBtn.textContent = '✓';
+                adoptBtn.disabled = true;
+            } else {
+                adoptBtn.textContent = '✗';
+                adoptBtn.disabled = false;
+            }
+        })
+        .catch(function() {
+            adoptBtn.textContent = 'Übernehmen';
+            adoptBtn.disabled = false;
+        });
+    }
+})();
+</script>
+{% endif %}
 
 {% endblock %}

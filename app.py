@@ -1,13 +1,17 @@
+import json
 import logging
 import os
+import re
 import sys
 import uuid
 from datetime import date
 from io import BytesIO
 from pathlib import Path
 
-from flask import Flask, abort, redirect, render_template, request, send_from_directory, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory, url_for
 from PIL import Image, ImageOps
+
+from llm import get_provider, is_llm_configured
 
 from db import (add_ereignis, add_plant, get_all_plants, get_plant,
                 init_db, close_db, remove_ereignis, remove_plant, update_plant,
@@ -93,6 +97,7 @@ def _render_index_error(error: str):
             aktuelle_phase=None,
             phasen_icons=PHASEN_ICONS,
             error=error,
+            llm_available=is_llm_configured(),
         ),
         400,
     )
@@ -112,6 +117,7 @@ def _render_edit_error(plant: dict, error: str):
             now_year=date.today().year,
             max_fotos=MAX_FOTOS_PER_PLANT,
             error=error,
+            llm_available=is_llm_configured(),
         ),
         400,
     )
@@ -260,7 +266,8 @@ def index():
                            filter_monat=filter_monat,
                            show_inactive=show_inactive,
                            aktuelle_phase=aktuelle_phase,
-                           phasen_icons=PHASEN_ICONS)
+                           phasen_icons=PHASEN_ICONS,
+                           llm_available=is_llm_configured())
 
 
 @app.route("/add", methods=["POST"])
@@ -291,6 +298,7 @@ def edit_route(plant_id: int):
         valid_kategorien=VALID_KATEGORIEN,
         now_year=date.today().year,
         max_fotos=MAX_FOTOS_PER_PLANT,
+        llm_available=is_llm_configured(),
     )
 
 
@@ -891,3 +899,160 @@ def remove_position_route(position_id):
 @app.route("/karte/<path:dateiname>")
 def serve_kartenbild(dateiname):
     return send_from_directory(str(KARTE_DIR), dateiname)
+
+
+# ---------------------------------------------------------------------------
+# KI-Autofill
+# ---------------------------------------------------------------------------
+
+def _build_autofill_prompt(name: str) -> str:
+    """Erstellt den Prompt für den Autofill-LLM-Aufruf."""
+    valid_kategorien_str = ", ".join(VALID_KATEGORIEN)
+    valid_lichtbedarf_str = ", ".join(sorted(VALID_LICHTBEDARF))
+    valid_lebensdauer_str = ", ".join(sorted(VALID_LEBENSDAUER))
+    valid_ereignistypen_str = ", ".join(sorted(VALID_EREIGNISTYPEN))
+
+    return f"""Gib mir strukturierte Pflanzendaten für: {name}
+
+Antworte ausschließlich mit einem JSON-Objekt im folgenden Format (keine zusätzlichen Erklärungen):
+
+{{
+  "beschreibung": "Kurze Beschreibung auf Deutsch mit gartenrelevanten Infos (Standort, Pflege, Schnitt)",
+  "typ": "Pflanzentyp (z.B. Beerenobst, Laubbaum, Staude)",
+  "sorte": "Sortenname oder leer lassen",
+  "lichtbedarf": "Einer der Werte: {valid_lichtbedarf_str}",
+  "lebensdauer": "Einer der Werte: {valid_lebensdauer_str}",
+  "kategorie": "Einer der Werte: {valid_kategorien_str}",
+  "ereignisse": [
+    {{
+      "ereignistyp": "Einer der Werte: {valid_ereignistypen_str}",
+      "startmonat": 1,
+      "endmonat": 12,
+      "start_detail": "",
+      "end_detail": ""
+    }}
+  ]
+}}
+
+Regeln:
+- Monatswerte als Ganzzahlen von 1 (Januar) bis 12 (Dezember)
+- Detail-Werte für start_detail und end_detail: "Anfang", "Mitte", "Ende" oder "" (leer)
+- Gültige Werte für lichtbedarf: {valid_lichtbedarf_str}
+- Gültige Werte für lebensdauer: {valid_lebensdauer_str}
+- Gültige Werte für kategorie: {valid_kategorien_str}
+- Gültige Werte für ereignistyp: {valid_ereignistypen_str}
+- Beschreibung auf Deutsch mit gartenrelevanten Informationen (Standort, Pflege, Schnitt)
+- Gib nur relevante Ereignisse an, die für diese Pflanze typisch sind"""
+
+
+def _parse_autofill_response(raw: str) -> dict | None:
+    """Parst die LLM-Antwort (JSON, ggf. aus Markdown-Codeblock)."""
+    if raw is None:
+        return None
+
+    # Versuche zuerst, JSON aus einem Markdown-Codeblock zu extrahieren
+    match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", raw, re.DOTALL)
+    if match:
+        json_str = match.group(1).strip()
+        try:
+            return json.loads(json_str)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Versuche direkt als JSON zu parsen
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    return None
+
+
+def _validate_autofill_data(data: dict) -> dict:
+    """Validiert und bereinigt die geparsten Pflanzendaten."""
+    result = {}
+
+    # Einfache String-Felder
+    result["beschreibung"] = data.get("beschreibung", "") if isinstance(data.get("beschreibung"), str) else ""
+    result["typ"] = data.get("typ", "") if isinstance(data.get("typ"), str) else ""
+    result["sorte"] = data.get("sorte", "") if isinstance(data.get("sorte"), str) else ""
+
+    # Enum-Felder validieren
+    lichtbedarf = data.get("lichtbedarf", "")
+    result["lichtbedarf"] = lichtbedarf if lichtbedarf in VALID_LICHTBEDARF else ""
+
+    lebensdauer = data.get("lebensdauer", "")
+    result["lebensdauer"] = lebensdauer if lebensdauer in VALID_LEBENSDAUER else ""
+
+    kategorie = data.get("kategorie", "")
+    result["kategorie"] = kategorie if kategorie in VALID_KATEGORIEN else ""
+
+    # Ereignisse validieren und filtern
+    raw_ereignisse = data.get("ereignisse", [])
+    if not isinstance(raw_ereignisse, list):
+        raw_ereignisse = []
+
+    valid_ereignisse = []
+    for e in raw_ereignisse:
+        if not isinstance(e, dict):
+            continue
+
+        ereignistyp = e.get("ereignistyp", "")
+        if ereignistyp not in VALID_EREIGNISTYPEN:
+            continue
+
+        try:
+            startmonat = int(e.get("startmonat", 0))
+            endmonat = int(e.get("endmonat", 0))
+        except (ValueError, TypeError):
+            continue
+
+        if not (1 <= startmonat <= 12) or not (1 <= endmonat <= 12):
+            continue
+
+        # Detail-Werte validieren
+        start_detail = e.get("start_detail", "")
+        if start_detail not in VALID_DETAIL:
+            start_detail = ""
+
+        end_detail = e.get("end_detail", "")
+        if end_detail not in VALID_DETAIL:
+            end_detail = ""
+
+        valid_ereignisse.append({
+            "ereignistyp": ereignistyp,
+            "startmonat": startmonat,
+            "endmonat": endmonat,
+            "start_detail": start_detail,
+            "end_detail": end_detail,
+        })
+
+    result["ereignisse"] = valid_ereignisse
+    return result
+
+
+@app.route("/api/autofill", methods=["POST"])
+def api_autofill():
+    """KI-Autofill: Gibt strukturierte Pflanzendaten als JSON zurück."""
+    req_data = request.get_json()
+    if not req_data or not req_data.get("name", "").strip():
+        return jsonify({"ok": False, "error": "Bitte einen Pflanzennamen eingeben."}), 400
+
+    if not is_llm_configured():
+        return jsonify({"ok": False, "error": "KI-Dienst nicht konfiguriert. Bitte API-Key setzen."}), 500
+
+    name = req_data["name"].strip()
+    prompt = _build_autofill_prompt(name)
+
+    try:
+        provider = get_provider()
+        raw = provider.generate(prompt)
+    except Exception:
+        return jsonify({"ok": False, "error": "KI-Dienst nicht erreichbar. Bitte später erneut versuchen."}), 502
+
+    parsed = _parse_autofill_response(raw)
+    if parsed is None:
+        return jsonify({"ok": False, "error": "KI-Antwort konnte nicht verarbeitet werden."}), 502
+
+    validated = _validate_autofill_data(parsed)
+    return jsonify({"ok": True, "data": validated})

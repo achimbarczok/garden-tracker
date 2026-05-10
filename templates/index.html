@@ -163,11 +163,12 @@
 
 <h2>Pflanze hinzufügen</h2>
 <div class="card">
-<form method="post" action="/add">
+<div id="autofill-error" style="display:none;background:#f8d7da;color:#721c24;padding:.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:.875rem"></div>
+<form method="post" action="/add" id="add-plant-form">
     <div class="form-grid">
         <div class="form-field">
             <label>Name *</label>
-            <input type="text" name="name" placeholder="z.B. Erdbeere" required>
+            <input type="text" name="name" placeholder="z.B. Erdbeere" required id="add-plant-name">
         </div>
         <div class="form-field">
             <label>Kategorie *</label>
@@ -229,11 +230,118 @@
             <label>Kommentar</label>
             <textarea name="kommentar" placeholder="Besonderheiten, Standort, ..."></textarea>
         </div>
+        <div class="form-field" style="grid-column: 1 / -1">
+            <label>Beschreibung (Referenzinfo)</label>
+            <textarea name="beschreibung" rows="3" placeholder="Allgemeine Infos zur Pflanze/Sorte..."></textarea>
+        </div>
     </div>
     <div class="form-actions">
+        {% if llm_available %}
+        <button type="button" id="btn-autofill" class="btn btn-outline" disabled>🤖 KI-Vorschlag</button>
+        {% endif %}
         <button type="submit" class="btn btn-primary">🌱 Pflanze hinzufügen</button>
     </div>
 </form>
+<div id="autofill-ereignisse" style="display:none;margin-top:1rem">
+    <h3>🗓️ Vorgeschlagene Ereignisse</h3>
+    <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem">Diese Ereignisse werden nach dem Speichern der Pflanze nicht automatisch übernommen – sie dienen nur als Referenz.</p>
+    <ul id="autofill-ereignisse-list" style="list-style:none;padding:0;margin:0"></ul>
 </div>
+</div>
+
+{% if llm_available %}
+<script>
+(function() {
+    var nameInput = document.getElementById('add-plant-name');
+    var btn = document.getElementById('btn-autofill');
+    var form = document.getElementById('add-plant-form');
+    var errorDiv = document.getElementById('autofill-error');
+    var ereignisseDiv = document.getElementById('autofill-ereignisse');
+    var ereignisseList = document.getElementById('autofill-ereignisse-list');
+
+    var MONATE = {{ german_months | tojson }};
+
+    nameInput.addEventListener('input', function() {
+        btn.disabled = !nameInput.value.trim();
+    });
+
+    btn.addEventListener('click', function() {
+        var name = nameInput.value.trim();
+        if (!name) return;
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Lade...';
+        errorDiv.style.display = 'none';
+        ereignisseDiv.style.display = 'none';
+
+        fetch('/api/autofill', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name})
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(result) {
+            if (result.ok) {
+                var d = result.data;
+                // Fill text/textarea fields
+                if (d.beschreibung) setField('beschreibung', d.beschreibung);
+                if (d.typ) setField('type', d.typ);
+                if (d.sorte) setField('variety', d.sorte);
+                // Fill select fields
+                if (d.lichtbedarf) setSelect('lichtbedarf', d.lichtbedarf);
+                if (d.lebensdauer) setSelect('lebensdauer', d.lebensdauer);
+                if (d.kategorie) setSelect('kategorie', d.kategorie);
+                // Show ereignisse
+                if (d.ereignisse && d.ereignisse.length > 0) {
+                    ereignisseList.innerHTML = '';
+                    d.ereignisse.forEach(function(e) {
+                        var li = document.createElement('li');
+                        li.style.cssText = 'padding:.4rem .5rem;margin-bottom:.25rem;background:var(--green-pale);border-radius:4px;font-size:.875rem';
+                        var zeitraum = '';
+                        if (e.start_detail) zeitraum += e.start_detail + ' ';
+                        zeitraum += MONATE[String(e.startmonat)];
+                        if (e.startmonat !== e.endmonat || e.start_detail !== e.end_detail) {
+                            zeitraum += ' – ';
+                            if (e.end_detail) zeitraum += e.end_detail + ' ';
+                            zeitraum += MONATE[String(e.endmonat)];
+                        }
+                        li.innerHTML = '<span class="ereignis-tag" data-typ="' + e.ereignistyp + '">' + e.ereignistyp + '</span> ' + zeitraum;
+                        ereignisseList.appendChild(li);
+                    });
+                    ereignisseDiv.style.display = '';
+                }
+            } else {
+                errorDiv.textContent = result.error || 'Unbekannter Fehler.';
+                errorDiv.style.display = '';
+            }
+        })
+        .catch(function() {
+            errorDiv.textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+            errorDiv.style.display = '';
+        })
+        .finally(function() {
+            btn.disabled = !nameInput.value.trim();
+            btn.textContent = '🤖 KI-Vorschlag';
+        });
+    });
+
+    function setField(name, value) {
+        var el = form.querySelector('[name="' + name + '"]');
+        if (el) el.value = value;
+    }
+
+    function setSelect(name, value) {
+        var el = form.querySelector('select[name="' + name + '"]');
+        if (!el) return;
+        for (var i = 0; i < el.options.length; i++) {
+            if (el.options[i].value === value) {
+                el.selectedIndex = i;
+                return;
+            }
+        }
+    }
+})();
+</script>
+{% endif %}
 
 {% endblock %}

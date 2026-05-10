@@ -38,11 +38,6 @@ pytest
 # Run the app locally
 DB_PATH=plants.db flask run
 
-# Seed the database with sample plants
-DB_PATH=plants.db python seed_plants.py
-DB_PATH=plants.db python seed_weitere_pflanzen.py
-DB_PATH=plants.db python seed_wildtulpe_etc.py
-
 # Send monthly garden report (test run)
 DB_PATH=plants.db ANTHROPIC_API_KEY=... MAIL_FROM=... MAIL_TO=... MAIL_PASSWORD=... python monthly_report.py
 
@@ -58,7 +53,10 @@ docker run --rm -v garden-data:/data -v $(pwd):/backup alpine \
 ## Key Environment Variables
 - `DB_PATH` — path to SQLite database file (default: `/data/plants.db`)
 - `PORT` — Flask server port (default: `5000`)
-- `ANTHROPIC_API_KEY` — Anthropic API key for monthly report generation
+- `LLM_PROVIDER` — LLM provider to use: `claude` (default) or `mistral`
+- `LLM_MODEL` — specific model name (optional, provider defaults apply)
+- `ANTHROPIC_API_KEY` — Anthropic API key for Claude (monthly report + autofill)
+- `MISTRAL_API_KEY` — Mistral API key (alternative LLM provider for autofill + report)
 - `MAIL_FROM` — sender Gmail address for monthly report
 - `MAIL_TO` — recipient email address for monthly report
 - `MAIL_PASSWORD` — Gmail App Password (not the regular Gmail password)
