@@ -276,11 +276,11 @@ def add():
     if error:
         return _render_index_error(error)
 
-    add_plant(data["name"], data["type"], data["variety"], data["lichtbedarf"],
+    new_id = add_plant(data["name"], data["type"], data["variety"], data["lichtbedarf"],
               data["kommentar"], data["lebensdauer"], data["pflanzmonat"],
               data["pflanzjahr"], data["anzahl"], data["kategorie"],
-              farbe=data["farbe"])
-    return redirect(url_for("index"))
+              beschreibung=data["beschreibung"], farbe=data["farbe"])
+    return redirect(f"/plant/{new_id}/edit")
 
 
 @app.route("/plant/<int:plant_id>/edit", methods=["GET"])

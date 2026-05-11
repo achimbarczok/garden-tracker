@@ -339,7 +339,7 @@ def add_plant(name: str, type: str, variety: str | None,
               anzahl: int = 1,
               kategorie: str | None = None,
               beschreibung: str | None = None,
-              farbe: str | None = None) -> None:
+              farbe: str | None = None) -> int:
     if variety == "":
         variety = None
     if kommentar == "":
@@ -349,7 +349,7 @@ def add_plant(name: str, type: str, variety: str | None,
     if type is None:
         type = ""
     with get_db() as conn:
-        conn.execute(
+        cursor = conn.execute(
             "INSERT INTO plants (name, type, variety, lichtbedarf, kommentar, "
             "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, beschreibung, farbe) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -357,6 +357,7 @@ def add_plant(name: str, type: str, variety: str | None,
              lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, beschreibung, farbe),
         )
         conn.commit()
+        return cursor.lastrowid
 
 
 def remove_plant(plant_id: int) -> None:
