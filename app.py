@@ -214,7 +214,6 @@ def _parse_plant_form():
         "lichtbedarf": lichtbedarf, "kommentar": kommentar,
         "lebensdauer": lebensdauer, "pflanzmonat": pflanzmonat,
         "pflanzjahr": pflanzjahr,
-        "anzahl": int(request.form.get("anzahl", 1) or 1),
         "kategorie": kategorie,
         "beschreibung": request.form.get("beschreibung", "").strip() or None,
         "farbe": farbe,
@@ -278,7 +277,7 @@ def add():
 
     new_id = add_plant(data["name"], data["type"], data["variety"], data["lichtbedarf"],
               data["kommentar"], data["lebensdauer"], data["pflanzmonat"],
-              data["pflanzjahr"], data["anzahl"], data["kategorie"],
+              data["pflanzjahr"], 1, data["kategorie"],
               beschreibung=data["beschreibung"], farbe=data["farbe"])
     return redirect(f"/plant/{new_id}/edit")
 
@@ -314,7 +313,7 @@ def edit_save(plant_id: int):
 
     update_plant(plant_id, data["name"], data["type"], data["variety"],
                  data["lichtbedarf"], data["kommentar"], data["lebensdauer"],
-                 data["pflanzmonat"], data["pflanzjahr"], data["anzahl"],
+                 data["pflanzmonat"], data["pflanzjahr"], 1,
                  data["kategorie"], data["beschreibung"], data["farbe"])
     return redirect(url_for("index"))
 

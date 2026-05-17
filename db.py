@@ -269,17 +269,21 @@ def get_all_plants(include_inactive: bool = False) -> list[dict]:
     with get_db() as conn:
         if include_inactive:
             rows = conn.execute(
-                "SELECT id, name, type, variety, lichtbedarf, kommentar, "
-                "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
-                "beschreibung, farbe, aktiv FROM plants "
-                "ORDER BY name COLLATE NOCASE"
+                "SELECT p.id, p.name, p.type, p.variety, p.lichtbedarf, p.kommentar, "
+                "p.lebensdauer, p.pflanzmonat, p.pflanzjahr, p.kategorie, "
+                "p.beschreibung, p.farbe, p.aktiv, "
+                "(SELECT COUNT(*) FROM kartenpositionen kp WHERE kp.plant_id = p.id) AS anzahl "
+                "FROM plants p "
+                "ORDER BY p.name COLLATE NOCASE"
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT id, name, type, variety, lichtbedarf, kommentar, "
-                "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
-                "beschreibung, farbe, aktiv FROM plants WHERE aktiv = 1 "
-                "ORDER BY name COLLATE NOCASE"
+                "SELECT p.id, p.name, p.type, p.variety, p.lichtbedarf, p.kommentar, "
+                "p.lebensdauer, p.pflanzmonat, p.pflanzjahr, p.kategorie, "
+                "p.beschreibung, p.farbe, p.aktiv, "
+                "(SELECT COUNT(*) FROM kartenpositionen kp WHERE kp.plant_id = p.id) AS anzahl "
+                "FROM plants p WHERE p.aktiv = 1 "
+                "ORDER BY p.name COLLATE NOCASE"
             ).fetchall()
         plants = []
         for row in rows:
@@ -408,10 +412,11 @@ def update_ereignis(ereignis_id: int, ereignistyp: str,
 def get_plant(plant_id: int) -> dict | None:
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, name, type, variety, lichtbedarf, kommentar, "
-            "lebensdauer, pflanzmonat, pflanzjahr, anzahl, kategorie, "
-            "beschreibung, farbe, aktiv "
-            "FROM plants WHERE id = ?",
+            "SELECT p.id, p.name, p.type, p.variety, p.lichtbedarf, p.kommentar, "
+            "p.lebensdauer, p.pflanzmonat, p.pflanzjahr, p.kategorie, "
+            "p.beschreibung, p.farbe, p.aktiv, "
+            "(SELECT COUNT(*) FROM kartenpositionen kp WHERE kp.plant_id = p.id) AS anzahl "
+            "FROM plants p WHERE p.id = ?",
             (plant_id,),
         ).fetchone()
         if row is None:
