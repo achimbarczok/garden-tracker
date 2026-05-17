@@ -83,7 +83,7 @@
     <tbody>
     {% for plant in plants %}
         <tr{% if plant.aktiv == 0 %} class="row-inactive"{% endif %}>
-            <td><a href="/plant/{{ plant.id }}/edit">{% if plant.farbe %}<span class="color-dot" style="background:{{ plant.farbe }}"></span>{% endif %}<strong>{{ plant.name }}</strong></a>{% if plant.aktiv == 0 %} <span class="badge badge-inactive">inaktiv</span>{% endif %}{% if plant.anzahl and plant.anzahl > 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
+            <td><a href="/plant/{{ plant.id }}/edit">{% if plant.farbe %}<span class="color-dot" style="background:{{ plant.farbe }}"></span>{% endif %}<strong>{{ plant.name }}</strong></a>{% if plant.aktiv == 0 %} <span class="badge badge-inactive">inaktiv</span>{% endif %}{% if plant.anzahl and plant.anzahl >= 1 %} <span class="badge badge-peren">{{ plant.anzahl }}×</span>{% endif %}</td>
             <td class="hide-mobile">{{ plant.kategorie or '' }}</td>
             <td class="hide-mobile">
                 {% if plant.type %}{{ plant.type }}{% endif %}
