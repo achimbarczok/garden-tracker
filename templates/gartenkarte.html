@@ -57,7 +57,8 @@
            data-plant-id="{{ pos.plant_id }}"
            title="{{ pos.name }}">
         <form method="post" action="/gartenkarte/position/{{ pos.id }}/remove" class="marker-remove">
-          <button type="submit" class="marker-remove-btn" title="Entfernen">×</button>
+          <button type="submit" class="marker-remove-btn" title="Entfernen"
+                  onclick="return confirm('Position von {{ pos.name }} wirklich entfernen?')">×</button>
         </form>
       </div>
       {% endfor %}
@@ -103,6 +104,16 @@
     var yInput = document.getElementById('karte-y');
     var hint = document.getElementById('karte-hint');
     var sel = form.querySelector('select');
+
+    // Highlighting beim Laden anwenden (wenn plant_id in URL)
+    function applyHighlight() {
+      var pid = sel.value;
+      document.querySelectorAll('.karte-marker').forEach(function(m){
+        m.style.opacity = (!pid || m.dataset.plantId == pid) ? '1' : '0.3';
+      });
+    }
+    applyHighlight();
+
     wrap.addEventListener('click', function(e){
       if(e.target.closest('.marker-remove')) return;
       var rect = img.getBoundingClientRect();
@@ -112,16 +123,22 @@
       xInput.value = x;
       yInput.value = y;
       if(sel.value){
+        // plant_id als hidden field mitschicken, damit nach Redirect die Auswahl erhalten bleibt
+        var pidInput = document.createElement('input');
+        pidInput.type = 'hidden';
+        pidInput.name = 'selected_plant_id';
+        pidInput.value = sel.value;
+        form.appendChild(pidInput);
         form.submit();
       } else {
         hint.textContent = 'Bitte zuerst eine Pflanze wählen.';
       }
     });
     sel.addEventListener('change', function(){
-      var pid = sel.value;
-      document.querySelectorAll('.karte-marker').forEach(function(m){
-        m.style.opacity = (!pid || m.dataset.plantId == pid) ? '1' : '0.5';
-      });
+      applyHighlight();
+      if(sel.value) {
+        hint.textContent = 'Auf die Karte klicken, um die Pflanze zu platzieren.';
+      }
     });
   })();
   </script>

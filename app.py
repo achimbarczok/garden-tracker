@@ -886,12 +886,18 @@ def add_position_route():
         return _render_karte_error("Ungültige Koordinaten.")
 
     add_kartenposition(plant_id, x, y)
-    return redirect(f"/gartenkarte?plant_id={plant_id}")
+    # Nach dem Platzieren die Pflanzen-Auswahl beibehalten
+    selected = request.form.get("selected_plant_id", str(plant_id))
+    return redirect(f"/gartenkarte?plant_id={selected}")
 
 
 @app.route("/gartenkarte/position/<int:position_id>/remove", methods=["POST"])
 def remove_position_route(position_id):
     remove_kartenposition(position_id)
+    # plant_id aus Referrer oder Form beibehalten
+    plant_id = request.form.get("selected_plant_id", "")
+    if plant_id:
+        return redirect(f"/gartenkarte?plant_id={plant_id}")
     return redirect("/gartenkarte")
 
 
