@@ -109,7 +109,7 @@
     function applyHighlight() {
       var pid = sel.value;
       document.querySelectorAll('.karte-marker').forEach(function(m){
-        m.style.opacity = (!pid || m.dataset.plantId == pid) ? '1' : '0.3';
+        m.style.opacity = (!pid || m.dataset.plantId == pid) ? '1' : '0.1';
       });
     }
     applyHighlight();
